@@ -1,23 +1,31 @@
-import React, { useRef, useState, useEffect } from "react";
+
+import React, { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import api from "../api";
 
 const VoteForm = () => {
-  const voteNumberRef = useRef(null);
+  const [voteNumber, setVoteNumber] = useState("");
   const [student, setStudent] = useState(null);
   const [positions, setPositions] = useState([]);
   const [selectedCandidates, setSelectedCandidates] = useState({});
   const [votedPositions, setVotedPositions] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loadingPosition, setLoadingPosition] = useState(null);
   const [fetchingStudent, setFetchingStudent] = useState(false);
+  const [loadingPositions, setLoadingPositions] = useState(true);
 
-  // ✅ Fetch all positions & candidates
+  // Fetch all positions and candidates
   const fetchPositions = async () => {
     try {
+      setLoadingPositions(true);
+
       const response = await api.get("/candidate/Positions");
+
       setPositions(response.data.positions || []);
     } catch (error) {
-      toast.error("Error fetching positions");
+      console.error("Error fetching positions:", error);
+      toast.error("Unable to load positions and candidates.");
+    } finally {
+      setLoadingPositions(false);
     }
   };
 
@@ -25,133 +33,760 @@ const VoteForm = () => {
     fetchPositions();
   }, []);
 
-  // ✅ Fetch student by vote number
+  // Fetch student by vote number
   const fetchStudent = async () => {
-    const voteNumber = voteNumberRef.current.value.trim();
-    if (!voteNumber) return toast.warning("Please enter vote number");
+    if (!voteNumber.trim()) {
+      toast.warning("Please enter vote number.");
+      return;
+    }
 
     try {
       setFetchingStudent(true);
-      const response = await api.get(`/student/getStudentByVoteNumber/${voteNumber}`);
-      if (response.data && response.data.student) {
+
+      const response = await api.get(
+        `/student/getStudentByVoteNumber/${voteNumber.trim()}`
+      );
+
+      if (response.data?.student) {
         setStudent(response.data.student);
-        toast.success("Student found!");
+
+        // Reset previous selections when changing student
+        setSelectedCandidates({});
+        setVotedPositions([]);
+
+        toast.success("Student verified successfully!");
       } else {
         setStudent(null);
-        toast.error("Student not found");
+        toast.error("Student not found.");
       }
     } catch (error) {
+      console.error("Student lookup error:", error);
+
       setStudent(null);
-      toast.error("Error fetching student");
+
+      toast.error(
+        error.response?.data?.message || "Student not found. Please check the vote number."
+      );
     } finally {
       setFetchingStudent(false);
     }
   };
 
-  // ✅ Handle vote for a specific position
+  // Handle candidate selection
+  const handleCandidateChange = (position, candidateId) => {
+    if (votedPositions.includes(position)) return;
+
+    setSelectedCandidates((prev) => ({
+      ...prev,
+      [position]: candidateId,
+    }));
+  };
+
+  // Handle voting
   const handleVote = async (position) => {
     const candidateId = selectedCandidates[position];
-    if (!candidateId) return toast.warning(`Please select a candidate for ${position}`);
-    if (!student) return toast.warning("Please fetch student first");
+
+    if (!candidateId) {
+      toast.warning(`Please select a candidate for ${position}.`);
+      return;
+    }
+
+    if (!student) {
+      toast.warning("Please verify the student first.");
+      return;
+    }
 
     try {
-      setLoading(true);
+      setLoadingPosition(position);
+
       await api.post("/vote/cast", {
         studentId: student._id,
         candidateId,
         position,
       });
 
-      toast.success(`Vote given for ${position}`);
+      toast.success(`Vote successfully submitted for ${position}!`);
+
       setVotedPositions((prev) => [...prev, position]);
+
+      // Remove selection after successful vote
+      setSelectedCandidates((prev) => {
+        const updated = { ...prev };
+        delete updated[position];
+        return updated;
+      });
     } catch (error) {
-      toast.error(error.response?.data?.message || "Error casting vote");
+      console.error("Vote error:", error);
+
+      toast.error(
+        error.response?.data?.message || "Error casting vote. Please try again."
+      );
     } finally {
-      setLoading(false);
+      setLoadingPosition(null);
     }
   };
 
-  return (
-    <div className="flex h-screen items-center justify-center bg-gray-100 p-4">
-      <div className="bg-white shadow-lg rounded-xl p-8 w-full max-w-4xl space-y-6">
-        <h1 className="text-2xl font-bold text-center text-gray-800 mb-6">
-          Cast Your Vote
-        </h1>
+  const votedCount = votedPositions.length;
+  const totalPositions = positions.length;
 
-        {/* ✅ Vote Number Input */}
-        <div className="flex flex-col sm:flex-row gap-4 mb-6">
-          <input
-            ref={voteNumberRef}
-            type="text"
-            placeholder="Enter Vote Number"
-            className="flex-1 px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-blue-400 focus:outline-none"
-          />
-          <button
-            type="button"
-            onClick={fetchStudent}
-            disabled={fetchingStudent}
-            className={`px-6 py-2 rounded-lg text-white font-semibold ${
-              fetchingStudent ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"
-            }`}
-          >
-            {fetchingStudent ? "Checking..." : "Check"}
-          </button>
+  const progress =
+    totalPositions > 0
+      ? Math.round((votedCount / totalPositions) * 100)
+      : 0;
+
+  return (
+    <div className="min-h-screen bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-6xl">
+
+        {/* =========================================================
+            HEADER
+        ========================================================= */}
+        <div className="mb-6 overflow-hidden rounded-3xl bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700 p-6 text-white shadow-xl shadow-purple-200/50 sm:p-8">
+          <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+
+            <div className="flex items-start gap-4">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/15 backdrop-blur-sm">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-7 w-7"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M9 14.25l-3.75 3.75m0 0L1.5 14.25m3.75 3.75V6.75A2.25 2.25 0 017.5 4.5h10.125a2.25 2.25 0 012.25 2.25v2.625"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M12.75 13.5h7.5m0 0l-3-3m3 3l-3 3"
+                  />
+                </svg>
+              </div>
+
+              <div>
+                <p className="text-sm font-medium text-purple-100">
+                  Student Election
+                </p>
+
+                <h1 className="mt-1 text-2xl font-bold sm:text-3xl">
+                  Cast Your Vote
+                </h1>
+
+                <p className="mt-2 max-w-xl text-sm leading-6 text-purple-100">
+                  Verify the student and select one candidate for each
+                  available position.
+                </p>
+              </div>
+            </div>
+
+            {/* Progress */}
+            {student && (
+              <div className="min-w-[180px] rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur-sm">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-purple-100">
+                    Voting Progress
+                  </span>
+
+                  <span className="font-bold">
+                    {votedCount}/{totalPositions}
+                  </span>
+                </div>
+
+                <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/20">
+                  <div
+                    className="h-full rounded-full bg-white transition-all duration-500"
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
+
+                <p className="mt-2 text-xs text-purple-100">
+                  {progress === 100
+                    ? "All positions completed"
+                    : `${progress}% completed`}
+                </p>
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* ✅ Student Info */}
+        {/* =========================================================
+            STUDENT SEARCH
+        ========================================================= */}
+        <div className="mb-6 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+
+          <div className="mb-5 flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-violet-100 text-violet-600">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth="1.8"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M15.75 6.75a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.5 20.25a7.5 7.5 0 0115 0"
+                />
+              </svg>
+            </div>
+
+            <div>
+              <h2 className="font-bold text-slate-900">
+                Verify Student
+              </h2>
+
+              <p className="text-xs text-slate-500">
+                Enter the student's vote number to continue.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <div className="relative flex-1">
+              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M9 5.25h6M9 8.25h6M6.75 4.5h10.5A2.25 2.25 0 0119.5 6.75v10.5a2.25 2.25 0 01-2.25 2.25H6.75a2.25 2.25 0 01-2.25-2.25V6.75A2.25 2.25 0 016.75 4.5z"
+                  />
+                </svg>
+              </div>
+
+              <input
+                type="text"
+                value={voteNumber}
+                onChange={(e) => setVoteNumber(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    fetchStudent();
+                  }
+                }}
+                placeholder="Enter vote number"
+                disabled={fetchingStudent}
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3.5 pl-12 pr-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 hover:border-slate-300 focus:border-violet-500 focus:bg-white focus:ring-4 focus:ring-violet-500/10 disabled:cursor-not-allowed disabled:opacity-60"
+              />
+            </div>
+
+            <button
+              type="button"
+              onClick={fetchStudent}
+              disabled={fetchingStudent}
+              className="flex min-h-[50px] items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-7 text-sm font-semibold text-white shadow-lg shadow-violet-500/20 transition duration-200 hover:-translate-y-0.5 hover:from-violet-700 hover:to-indigo-700 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
+            >
+              {fetchingStudent ? (
+                <>
+                  <svg
+                    className="h-5 w-5 animate-spin"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                    />
+                  </svg>
+
+                  Checking...
+                </>
+              ) : (
+                <>
+                  Verify Student
+
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-5 w-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M13.5 6l6 6-6 6M18.5 12H4.5"
+                    />
+                  </svg>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* =========================================================
+            STUDENT INFORMATION
+        ========================================================= */}
         {student && (
-          <div className="border p-4 rounded-lg bg-gray-50">
-            <p><strong>Username:</strong> {student.username}</p>
-            <p><strong>Class:</strong> {student.class}</p>
-            <p><strong>Section:</strong> {student.section}</p>
-            <p><strong>Vote Number:</strong> {student.voteNumber}</p>
+          <div className="mb-6 overflow-hidden rounded-3xl border border-emerald-100 bg-white shadow-sm">
+
+            <div className="flex items-center gap-4 border-b border-slate-100 bg-emerald-50/70 px-5 py-4 sm:px-6">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M9 12.75l2 2 4-4.5"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M12 3l7.5 4.5v5.25c0 4.5-3.25 7.5-7.5 8.25-4.25-.75-7.5-3.75-7.5-8.25V7.5L12 3z"
+                  />
+                </svg>
+              </div>
+
+              <div>
+                <h2 className="font-bold text-slate-900">
+                  Student Verified
+                </h2>
+
+                <p className="text-xs text-emerald-600">
+                  Student information has been successfully verified.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-px bg-slate-100 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="bg-white p-5">
+                <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                  Username
+                </p>
+
+                <p className="mt-1 truncate font-semibold text-slate-800">
+                  {student.username}
+                </p>
+              </div>
+
+              <div className="bg-white p-5">
+                <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                  Class
+                </p>
+
+                <p className="mt-1 font-semibold text-slate-800">
+                  {student.class}
+                </p>
+              </div>
+
+              <div className="bg-white p-5">
+                <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                  Section
+                </p>
+
+                <p className="mt-1 font-semibold text-slate-800">
+                  {student.section}
+                </p>
+              </div>
+
+              <div className="bg-white p-5">
+                <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                  Vote Number
+                </p>
+
+                <p className="mt-1 font-semibold text-violet-600">
+                  {student.voteNumber}
+                </p>
+              </div>
+            </div>
           </div>
         )}
 
-        {/* ✅ Positions & Candidates */}
-        {student && positions.map((pos) => (
-          <div key={pos._id} className="border p-4 rounded-lg bg-white shadow-sm flex flex-col sm:flex-row justify-between items-center mb-4">
-            <div>
-              <h2 className="font-bold text-gray-700 mb-2">{pos.position}</h2>
-              <div className="flex flex-col gap-2">
-                {pos.candidates.map((c) => (
-                  <label key={c._id} className="flex items-center gap-2">
-                    <input
-                      type="radio"
-                      name={pos.position}
-                      value={c._id}
-                      disabled={votedPositions.includes(pos.position)}
-                      checked={selectedCandidates[pos.position] === c._id}
-                      onChange={() =>
-                        setSelectedCandidates((prev) => ({ ...prev, [pos.position]: c._id }))
-                      }
-                      className="form-radio text-blue-600"
-                    />
-                    {c.name}
-                  </label>
-                ))}
+        {/* =========================================================
+            LOADING POSITIONS
+        ========================================================= */}
+        {student && loadingPositions && (
+          <div className="rounded-3xl border border-slate-200 bg-white p-10 text-center shadow-sm">
+            <svg
+              className="mx-auto h-8 w-8 animate-spin text-violet-600"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              />
+
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+              />
+            </svg>
+
+            <p className="mt-3 text-sm font-medium text-slate-600">
+              Loading positions...
+            </p>
+          </div>
+        )}
+
+        {/* =========================================================
+            POSITIONS
+        ========================================================= */}
+        {student && !loadingPositions && positions.length > 0 && (
+          <div className="space-y-5">
+
+            <div className="flex items-end justify-between">
+              <div>
+                <p className="text-sm font-medium text-violet-600">
+                  Election Positions
+                </p>
+
+                <h2 className="mt-1 text-xl font-bold text-slate-900">
+                  Choose Your Candidates
+                </h2>
               </div>
+
+              <span className="hidden rounded-full bg-violet-100 px-3 py-1.5 text-xs font-semibold text-violet-700 sm:block">
+                {votedCount} of {totalPositions} completed
+              </span>
             </div>
-            <div>
-              {votedPositions.includes(pos.position) ? (
-                <span className="text-green-600 font-semibold">Vote Given</span>
-              ) : (
-                <button
-                  onClick={() => handleVote(pos.position)}
-                  disabled={loading}
-                  className={`px-4 py-2 rounded-lg text-white font-semibold ${
-                    loading ? "bg-gray-400 cursor-not-allowed" : "bg-green-600 hover:bg-green-700"
+
+            {positions.map((pos, index) => {
+              const isVoted = votedPositions.includes(pos.position);
+              const selectedCandidate = selectedCandidates[pos.position];
+              const isSubmitting = loadingPosition === pos.position;
+
+              return (
+                <div
+                  key={pos._id}
+                  className={`overflow-hidden rounded-3xl border bg-white shadow-sm transition duration-200 ${
+                    isVoted
+                      ? "border-emerald-200"
+                      : "border-slate-200 hover:border-violet-200 hover:shadow-md"
                   }`}
                 >
-                  {loading ? "Submitting..." : "Vote"}
-                </button>
-              )}
-            </div>
+                  {/* Position Header */}
+                  <div
+                    className={`flex flex-col gap-4 border-b px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6 ${
+                      isVoted
+                        ? "border-emerald-100 bg-emerald-50/60"
+                        : "border-slate-100 bg-slate-50/70"
+                    }`}
+                  >
+                    <div className="flex items-center gap-4">
+                      <div
+                        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-sm font-bold ${
+                          isVoted
+                            ? "bg-emerald-100 text-emerald-600"
+                            : "bg-violet-100 text-violet-600"
+                        }`}
+                      >
+                        {isVoted ? (
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-5 w-5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M5 13l4 4L19 7"
+                            />
+                          </svg>
+                        ) : (
+                          index + 1
+                        )}
+                      </div>
+
+                      <div>
+                        <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                          Position {index + 1}
+                        </p>
+
+                        <h3 className="mt-0.5 text-lg font-bold text-slate-800">
+                          {pos.position}
+                        </h3>
+                      </div>
+                    </div>
+
+                    {isVoted && (
+                      <div className="flex items-center gap-2 self-start rounded-full bg-emerald-100 px-3 py-1.5 text-xs font-bold text-emerald-700 sm:self-auto">
+                        <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                        Vote Given
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Candidates */}
+                  <div className="p-5 sm:p-6">
+
+                    {pos.candidates?.length > 0 ? (
+                      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                        {pos.candidates.map((candidate) => {
+                          const isSelected =
+                            selectedCandidate === candidate._id;
+
+                          return (
+                            <label
+                              key={candidate._id}
+                              className={`group relative flex cursor-pointer items-center gap-4 rounded-2xl border p-4 transition duration-200 ${
+                                isVoted
+                                  ? "cursor-not-allowed border-slate-100 bg-slate-50 opacity-70"
+                                  : isSelected
+                                  ? "border-violet-500 bg-violet-50 ring-4 ring-violet-500/10"
+                                  : "border-slate-200 bg-white hover:border-violet-300 hover:bg-violet-50/40"
+                              }`}
+                            >
+                              <input
+                                type="radio"
+                                name={`position-${pos._id}`}
+                                value={candidate._id}
+                                disabled={isVoted || isSubmitting}
+                                checked={isSelected}
+                                onChange={() =>
+                                  handleCandidateChange(
+                                    pos.position,
+                                    candidate._id
+                                  )
+                                }
+                                className="sr-only"
+                              />
+
+                              {/* Custom Radio */}
+                              <div
+                                className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition ${
+                                  isSelected
+                                    ? "bg-violet-600 text-white"
+                                    : "bg-slate-100 text-slate-400 group-hover:bg-violet-100 group-hover:text-violet-500"
+                                }`}
+                              >
+                                <span className="text-sm font-bold">
+                                  {candidate.name?.charAt(0)?.toUpperCase()}
+                                </span>
+                              </div>
+
+                              <div className="min-w-0 flex-1">
+                                <p
+                                  className={`truncate text-sm font-semibold ${
+                                    isSelected
+                                      ? "text-violet-700"
+                                      : "text-slate-800"
+                                  }`}
+                                >
+                                  {candidate.name}
+                                </p>
+
+                                <p className="mt-0.5 text-xs text-slate-400">
+                                  {isSelected
+                                    ? "Selected candidate"
+                                    : "Click to select"}
+                                </p>
+                              </div>
+
+                              {/* Check */}
+                              <div
+                                className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition ${
+                                  isSelected
+                                    ? "border-violet-600 bg-violet-600"
+                                    : "border-slate-300"
+                                }`}
+                              >
+                                {isSelected && (
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    className="h-3 w-3 text-white"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    strokeWidth="3"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      d="M5 13l4 4L19 7"
+                                    />
+                                  </svg>
+                                )}
+                              </div>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="rounded-2xl bg-slate-50 p-5 text-center text-sm text-slate-500">
+                        No candidates available for this position.
+                      </div>
+                    )}
+
+                    {/* Vote Button */}
+                    {!isVoted && (
+                      <div className="mt-5 flex justify-end">
+                        <button
+                          type="button"
+                          onClick={() => handleVote(pos.position)}
+                          disabled={isSubmitting || !selectedCandidate}
+                          className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-green-600 px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-emerald-500/15 transition duration-200 hover:-translate-y-0.5 hover:from-emerald-600 hover:to-green-700 hover:shadow-xl disabled:cursor-not-allowed disabled:bg-slate-300 disabled:from-slate-300 disabled:to-slate-400 disabled:opacity-70 disabled:hover:translate-y-0 sm:w-auto"
+                        >
+                          {isSubmitting ? (
+                            <>
+                              <svg
+                                className="h-5 w-5 animate-spin"
+                                xmlns="http://www.w3.org/2000/svg"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                              >
+                                <circle
+                                  className="opacity-25"
+                                  cx="12"
+                                  cy="12"
+                                  r="10"
+                                  stroke="currentColor"
+                                  strokeWidth="4"
+                                />
+
+                                <path
+                                  className="opacity-75"
+                                  fill="currentColor"
+                                  d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                                />
+                              </svg>
+
+                              Submitting...
+                            </>
+                          ) : (
+                            <>
+                              Submit Vote
+
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="h-5 w-5"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                                strokeWidth="1.8"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  d="M13.5 6l6 6-6 6M18.5 12H4.5"
+                                />
+                              </svg>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        ))}
+        )}
+
+        {/* =========================================================
+            NO POSITIONS
+        ========================================================= */}
+        {student && !loadingPositions && positions.length === 0 && (
+          <div className="rounded-3xl border border-slate-200 bg-white p-10 text-center shadow-sm">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-7 w-7"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth="1.8"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M9 12h6m-6 4h6m2.25-12H6.75A2.25 2.25 0 004.5 6.25v11.5A2.25 2.25 0 006.75 20h10.5a2.25 2.25 0 002.25-2.25V6.25A2.25 2.25 0 0017.25 4z"
+                />
+              </svg>
+            </div>
+
+            <h3 className="mt-4 font-bold text-slate-800">
+              No Voting Positions Available
+            </h3>
+
+            <p className="mt-1 text-sm text-slate-500">
+              There are currently no positions available for voting.
+            </p>
+          </div>
+        )}
+
+        {/* =========================================================
+            COMPLETED MESSAGE
+        ========================================================= */}
+        {student &&
+          !loadingPositions &&
+          positions.length > 0 &&
+          votedPositions.length === positions.length && (
+            <div className="mt-6 overflow-hidden rounded-3xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-green-50 p-6 text-center sm:p-8">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-7 w-7"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
+              </div>
+
+              <h3 className="mt-4 text-xl font-bold text-emerald-800">
+                Voting Completed
+              </h3>
+
+              <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-emerald-700">
+                All available positions have been successfully voted for.
+                Thank you for participating in the election.
+              </p>
+            </div>
+          )}
+
+        {/* Footer */}
+        <p className="py-6 text-center text-xs text-slate-400">
+          Please review your selection carefully before submitting each vote.
+        </p>
       </div>
     </div>
   );
 };
 
 export default VoteForm;
+

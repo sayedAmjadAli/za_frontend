@@ -8,6 +8,7 @@ import Home from "./pages/Home";
 import Student from "./pages/Student";
 import CandidateRegister from "./pages/Candidate";
 import Vote from "./pages/Vote";
+import Admin from "./pages/Admin";
 
 
 const router = createBrowserRouter([
@@ -17,7 +18,7 @@ const router = createBrowserRouter([
   },
   {
     path:"/registerstudent",
-    element:<Student/>  // Register Student
+    element:<Student/>  // Register Student`
   },
   {
     path:"/candidateregister",
@@ -26,6 +27,10 @@ const router = createBrowserRouter([
   {
     path:"/vote",
     element:<Vote/>  // Register Student
+  },
+  {
+    path:"/admin",
+    element:<Admin/>  
   }
 ]);
 
