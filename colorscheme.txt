@@ -1,0 +1,8 @@
+navy blue : [#0170B9]
+
+
+newdata = new Data().toDateString();
+
+bradcerm each page
+toast message login check email password 
+10 record per page .
