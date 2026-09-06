@@ -2,6 +2,15 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
 import api from "../api";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 
 const AdminDashboard = () => {
   const [students, setStudents] = useState([]);
@@ -148,6 +157,21 @@ const AdminDashboard = () => {
   const totalStudents = students.length;
 
   const totalVotes = votes.length;
+
+  // =========================================================
+  // CHART DATA
+  // =========================================================
+  const chartData = useMemo(() => {
+    return positions
+      .flatMap((position) =>
+        (position.candidates || []).map((candidate) => ({
+          candidate: candidate.name,
+          position: position.position,
+          votes: getVoteCount(candidate._id, position.position),
+        }))
+      )
+      .sort((a, b) => b.votes - a.votes);
+  }, [positions, votes]);
 
   // =========================================================
   // EXPORT RESULTS
@@ -572,6 +596,178 @@ const AdminDashboard = () => {
 
           </div>
 
+        </div>
+
+        {/* =====================================================
+            ELECTION RESULTS CHART
+        ===================================================== */}
+        <div className="mb-6 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+          <div className="border-b border-slate-100 bg-gradient-to-r from-white to-violet-50/60 px-5 py-5 sm:px-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-violet-100 text-violet-600">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-5 w-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M4.5 19.5V11m5 8.5V6.5m5 13V9m5 10.5V3.5"
+                    />
+                  </svg>
+                </div>
+
+                <div>
+                  <h2 className="font-bold text-slate-900">
+                    Election Results Overview
+                  </h2>
+                  <p className="text-xs text-slate-500">
+                    Live vote comparison across all Students Council candidates.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="rounded-full bg-violet-100 px-3 py-1.5 text-xs font-bold text-violet-700">
+                  {totalVotes} Total Votes
+                </span>
+                <span className="rounded-full bg-emerald-100 px-3 py-1.5 text-xs font-bold text-emerald-700">
+                  Live Results
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {chartData.length === 0 ? (
+            <div className="flex min-h-[360px] items-center justify-center p-6">
+              <div className="rounded-2xl bg-slate-50 px-8 py-12 text-center">
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-7 w-7"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth="1.7"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M3.75 18.75h16.5M6.75 15.75v3m3.75-6v6m3.75-9v9m3.75-12v12"
+                    />
+                  </svg>
+                </div>
+
+                <h3 className="mt-4 font-bold text-slate-800">
+                  No voting results yet
+                </h3>
+
+                <p className="mt-1 max-w-sm text-sm text-slate-500">
+                  Candidate vote results will appear here as students cast their votes.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="p-4 sm:p-6">
+              <div className="mb-5 flex flex-wrap items-center gap-2">
+                <span className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600">
+                  Highest vote: {chartData[0]?.votes || 0}
+                </span>
+
+                <span className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600">
+                  {chartData.length} Candidates
+                </span>
+              </div>
+
+              <div className="h-[430px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={chartData}
+                    layout="vertical"
+                    margin={{
+                      top: 10,
+                      right: 25,
+                      left: 20,
+                      bottom: 10,
+                    }}
+                    barCategoryGap="22%"
+                  >
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      horizontal={false}
+                    />
+
+                    <XAxis
+                      type="number"
+                      allowDecimals={false}
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 12 }}
+                    />
+
+                    <YAxis
+                      type="category"
+                      dataKey="candidate"
+                      width={125}
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 12 }}
+                    />
+
+                    <Tooltip
+                      cursor={{ fill: "rgba(139, 92, 246, 0.06)" }}
+                      content={({ active, payload }) => {
+                        if (!active || !payload?.length) return null;
+
+                        const item = payload[0].payload;
+
+                        return (
+                          <div className="min-w-[190px] rounded-2xl border border-slate-200 bg-white p-4 shadow-xl">
+                            <p className="font-bold text-slate-900">
+                              {item.candidate}
+                            </p>
+
+                            <p className="mt-1 text-xs font-medium text-slate-400">
+                              Position: {item.position}
+                            </p>
+
+                            <div className="mt-3 flex items-end justify-between gap-4">
+                              <span className="text-xs font-semibold text-slate-500">
+                                Votes
+                              </span>
+
+                              <span className="text-2xl font-extrabold text-violet-600">
+                                {item.votes}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      }}
+                    />
+
+                    <Bar
+                      dataKey="votes"
+                      name="Votes"
+                      radius={[0, 10, 10, 0]}
+                      maxBarSize={32}
+                      fill="#7c3aed"
+                      label={{
+                        position: "right",
+                        fill: "#475569",
+                        fontSize: 12,
+                        fontWeight: 700,
+                      }}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* =====================================================
