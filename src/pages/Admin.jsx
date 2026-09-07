@@ -688,7 +688,6 @@ const AdminDashboard = () => {
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
                     data={chartData}
-                    layout="vertical"
                     margin={{
                       top: 10,
                       right: 25,
@@ -703,19 +702,22 @@ const AdminDashboard = () => {
                     />
 
                     <XAxis
+                      dataKey="candidate"
+                      axisLine={false}
+                      tickLine={false}
+                      interval={0}
+                      angle={-35}
+                      textAnchor="end"
+                      height={90}
+                      tick={{ fontSize: 11 }}
+                    />
+
+                    <YAxis
                       type="number"
                       allowDecimals={false}
                       axisLine={false}
                       tickLine={false}
-                      tick={{ fontSize: 12 }}
-                    />
-
-                    <YAxis
-                      type="category"
-                      dataKey="candidate"
-                      width={125}
-                      axisLine={false}
-                      tickLine={false}
+                      width={45}
                       tick={{ fontSize: 12 }}
                     />
 
@@ -753,11 +755,11 @@ const AdminDashboard = () => {
                     <Bar
                       dataKey="votes"
                       name="Votes"
-                      radius={[0, 10, 10, 0]}
-                      maxBarSize={32}
+                      radius={[10, 10, 0, 0]}
+                      maxBarSize={56}
                       fill="#7c3aed"
                       label={{
-                        position: "right",
+                        position: "top",
                         fill: "#475569",
                         fontSize: 12,
                         fontWeight: 700,
