@@ -1,4 +1,3 @@
-
 import React, { useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
 import api from "../api";
@@ -18,38 +17,106 @@ const AdminDashboard = () => {
   const [votes, setVotes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [studentClassSearch, setStudentClassSearch] = useState("");
+
+  // =========================================================
+  // FILTER STUDENTS BY EXACT CLASS
+  // =========================================================
+  const filteredStudents = useMemo(() => {
+    const search = studentClassSearch.trim().toLowerCase();
+
+    if (!search) {
+      return students;
+    }
+
+    // Exact class matching:
+    // X  -> only X
+    // V  -> only V
+    // XI -> only XI
+    // VIII -> only VIII
+    return students.filter((student) => {
+      const studentClass = String(student.class || "")
+        .trim()
+        .toLowerCase();
+
+      return studentClass === search;
+    });
+  }, [students, studentClassSearch]);
 
   // =========================================================
   // FETCH DATA
   // =========================================================
   const fetchData = async (showRefresh = false) => {
-    try {
-      if (showRefresh) {
-        setRefreshing(true);
-      } else {
-        setLoading(true);
-      }
-
-      const [studentsRes, positionsRes, votesRes] = await Promise.all([
-        api.get("/student/getStudents"),
-        api.get("/candidate/Positions"),
-        api.get("/vote/getVotes"),
-      ]);
-
-      setStudents(studentsRes.data.students || []);
-      setPositions(positionsRes.data.positions || []);
-      setVotes(votesRes.data.votes || []);
-
-      if (showRefresh) {
-        toast.success("Dashboard refreshed successfully");
-      }
-    } catch (error) {
-      console.error("Dashboard error:", error);
-      toast.error("Error fetching admin data");
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
+    if (showRefresh) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
     }
+
+    try {
+      const studentsRes = await api.get("/student/getStudents");
+      console.log("STUDENTS API RESPONSE:", studentsRes.data);
+
+      setStudents(
+        Array.isArray(studentsRes.data?.students)
+          ? studentsRes.data.students
+          : []
+      );
+    } catch (error) {
+      console.error(
+        "STUDENTS API ERROR:",
+        error.response?.data || error.message
+      );
+
+      setStudents([]);
+
+      toast.error(
+        error.response?.data?.message || "Unable to load students"
+      );
+    }
+
+    try {
+      const positionsRes = await api.get("/candidate/Positions");
+      console.log("POSITIONS API RESPONSE:", positionsRes.data);
+
+      setPositions(
+        Array.isArray(positionsRes.data?.positions)
+          ? positionsRes.data.positions
+          : []
+      );
+    } catch (error) {
+      console.error(
+        "POSITIONS API ERROR:",
+        error.response?.data || error.message
+      );
+
+      setPositions([]);
+    }
+
+    try {
+      const votesRes = await api.get("/vote/getVotes");
+      console.log("VOTES API RESPONSE:", votesRes.data);
+
+      setVotes(
+        Array.isArray(votesRes.data?.votes)
+          ? votesRes.data.votes
+          : []
+      );
+    } catch (error) {
+      console.error(
+        "VOTES API ERROR:",
+        error.response?.data || error.message
+      );
+
+      setVotes([]);
+    }
+
+    if (showRefresh) {
+      toast.success("Dashboard refreshed successfully");
+    }
+
+    setLoading(false);
+    setRefreshing(false);
   };
 
   useEffect(() => {
@@ -74,6 +141,7 @@ const AdminDashboard = () => {
       fetchData();
     } catch (error) {
       console.error(error);
+
       toast.error(
         error.response?.data?.message || "Error deleting student"
       );
@@ -98,6 +166,7 @@ const AdminDashboard = () => {
       fetchData();
     } catch (error) {
       console.error(error);
+
       toast.error(
         error.response?.data?.message || "Error deleting candidate"
       );
@@ -602,9 +671,13 @@ const AdminDashboard = () => {
             ELECTION RESULTS CHART
         ===================================================== */}
         <div className="mb-6 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+
           <div className="border-b border-slate-100 bg-gradient-to-r from-white to-violet-50/60 px-5 py-5 sm:px-6">
+
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+
               <div className="flex items-center gap-3">
+
                 <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-violet-100 text-violet-600">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -626,27 +699,37 @@ const AdminDashboard = () => {
                   <h2 className="font-bold text-slate-900">
                     Election Results Overview
                   </h2>
+
                   <p className="text-xs text-slate-500">
                     Live vote comparison across all Students Council candidates.
                   </p>
                 </div>
+
               </div>
 
               <div className="flex items-center gap-2">
+
                 <span className="rounded-full bg-violet-100 px-3 py-1.5 text-xs font-bold text-violet-700">
                   {totalVotes} Total Votes
                 </span>
+
                 <span className="rounded-full bg-emerald-100 px-3 py-1.5 text-xs font-bold text-emerald-700">
                   Live Results
                 </span>
+
               </div>
+
             </div>
           </div>
 
           {chartData.length === 0 ? (
+
             <div className="flex min-h-[360px] items-center justify-center p-6">
+
               <div className="rounded-2xl bg-slate-50 px-8 py-12 text-center">
+
                 <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
+
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     className="h-7 w-7"
@@ -661,6 +744,7 @@ const AdminDashboard = () => {
                       d="M3.75 18.75h16.5M6.75 15.75v3m3.75-6v6m3.75-9v9m3.75-12v12"
                     />
                   </svg>
+
                 </div>
 
                 <h3 className="mt-4 font-bold text-slate-800">
@@ -670,11 +754,17 @@ const AdminDashboard = () => {
                 <p className="mt-1 max-w-sm text-sm text-slate-500">
                   Candidate vote results will appear here as students cast their votes.
                 </p>
+
               </div>
+
             </div>
+
           ) : (
+
             <div className="p-4 sm:p-6">
+
               <div className="mb-5 flex flex-wrap items-center gap-2">
+
                 <span className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600">
                   Highest vote: {chartData[0]?.votes || 0}
                 </span>
@@ -682,10 +772,13 @@ const AdminDashboard = () => {
                 <span className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600">
                   {chartData.length} Candidates
                 </span>
+
               </div>
 
               <div className="h-[430px] w-full">
+
                 <ResponsiveContainer width="100%" height="100%">
+
                   <BarChart
                     data={chartData}
                     margin={{
@@ -696,6 +789,7 @@ const AdminDashboard = () => {
                     }}
                     barCategoryGap="22%"
                   >
+
                     <CartesianGrid
                       strokeDasharray="3 3"
                       horizontal={false}
@@ -724,12 +818,14 @@ const AdminDashboard = () => {
                     <Tooltip
                       cursor={{ fill: "rgba(139, 92, 246, 0.06)" }}
                       content={({ active, payload }) => {
+
                         if (!active || !payload?.length) return null;
 
                         const item = payload[0].payload;
 
                         return (
                           <div className="min-w-[190px] rounded-2xl border border-slate-200 bg-white p-4 shadow-xl">
+
                             <p className="font-bold text-slate-900">
                               {item.candidate}
                             </p>
@@ -739,6 +835,7 @@ const AdminDashboard = () => {
                             </p>
 
                             <div className="mt-3 flex items-end justify-between gap-4">
+
                               <span className="text-xs font-semibold text-slate-500">
                                 Votes
                               </span>
@@ -746,7 +843,9 @@ const AdminDashboard = () => {
                               <span className="text-2xl font-extrabold text-violet-600">
                                 {item.votes}
                               </span>
+
                             </div>
+
                           </div>
                         );
                       }}
@@ -765,220 +864,12 @@ const AdminDashboard = () => {
                         fontWeight: 700,
                       }}
                     />
+
                   </BarChart>
+
                 </ResponsiveContainer>
+
               </div>
-            </div>
-          )}
-        </div>
-
-        {/* =====================================================
-            STUDENTS
-        ===================================================== */}
-        <div className="mb-6 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-
-          {/* Section Header */}
-          <div className="flex flex-col gap-4 border-b border-slate-100 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
-
-            <div className="flex items-center gap-3">
-
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-violet-100 text-violet-600">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth="1.7"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M15.75 6.75a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z"
-                  />
-
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M4.5 20.25a7.5 7.5 0 0115 0"
-                  />
-                </svg>
-              </div>
-
-              <div>
-                <h2 className="font-bold text-slate-900">
-                  Registered Students
-                </h2>
-
-                <p className="text-xs text-slate-500">
-                  Manage students registered in the election.
-                </p>
-              </div>
-
-            </div>
-
-            <span className="self-start rounded-full bg-violet-100 px-3 py-1.5 text-xs font-bold text-violet-700 sm:self-auto">
-              {students.length} Students
-            </span>
-
-          </div>
-
-          {students.length === 0 ? (
-
-            <div className="p-10 text-center">
-
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-7 w-7"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth="1.7"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M15.75 6.75a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z"
-                  />
-
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M4.5 20.25a7.5 7.5 0 0115 0"
-                  />
-                </svg>
-              </div>
-
-              <h3 className="mt-4 font-bold text-slate-800">
-                No Students Registered
-              </h3>
-
-              <p className="mt-1 text-sm text-slate-500">
-                Registered students will appear here.
-              </p>
-
-            </div>
-
-          ) : (
-
-            <div className="overflow-x-auto">
-
-              <table className="w-full min-w-[720px]">
-
-                <thead>
-                  <tr className="bg-slate-50 text-left text-xs uppercase tracking-wider text-slate-500">
-                    <th className="px-6 py-4 font-semibold">
-                      Student
-                    </th>
-
-                    <th className="px-6 py-4 font-semibold">
-                      Class
-                    </th>
-
-                    <th className="px-6 py-4 font-semibold">
-                      Section
-                    </th>
-
-                    <th className="px-6 py-4 font-semibold">
-                      Vote Number
-                    </th>
-
-                    <th className="px-6 py-4 text-right font-semibold">
-                      Action
-                    </th>
-                  </tr>
-                </thead>
-
-                <tbody className="divide-y divide-slate-100">
-
-                  {students.map((student) => (
-
-                    <tr
-                      key={student._id}
-                      className="transition hover:bg-slate-50"
-                    >
-
-                      <td className="px-6 py-4">
-
-                        <div className="flex items-center gap-3">
-
-                          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-100 font-bold text-violet-600">
-                            {student.username
-                              ?.charAt(0)
-                              ?.toUpperCase()}
-                          </div>
-
-                          <div>
-                            <p className="font-semibold text-slate-800">
-                              {student.username}
-                            </p>
-
-                            <p className="text-xs text-slate-400">
-                              Student
-                            </p>
-                          </div>
-
-                        </div>
-
-                      </td>
-
-                      <td className="px-6 py-4 text-sm text-slate-600">
-                        {student.class}
-                      </td>
-
-                      <td className="px-6 py-4">
-
-                        <span className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600">
-                          {student.section}
-                        </span>
-
-                      </td>
-
-                      <td className="px-6 py-4">
-
-                        <span className="rounded-lg bg-violet-50 px-3 py-1.5 text-sm font-bold text-violet-600">
-                          {student.voteNumber}
-                        </span>
-
-                      </td>
-
-                      <td className="px-6 py-4 text-right">
-
-                        <button
-                          type="button"
-                          onClick={() =>
-                            deleteStudent(student._id)
-                          }
-                          className="inline-flex items-center gap-2 rounded-xl bg-red-50 px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-100"
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            className="h-4 w-4"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                            strokeWidth="1.8"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              d="M6 7.5h12M9.75 7.5V5.25h4.5V7.5m-6.75 0l.75 12h7.5l.75-12"
-                            />
-                          </svg>
-
-                          Delete
-                        </button>
-
-                      </td>
-
-                    </tr>
-
-                  ))}
-
-                </tbody>
-
-              </table>
 
             </div>
 
@@ -996,6 +887,7 @@ const AdminDashboard = () => {
             <div className="flex items-center gap-3">
 
               <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-100 text-amber-600">
+
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   className="h-5 w-5"
@@ -1010,9 +902,11 @@ const AdminDashboard = () => {
                     d="M12 3l2.5 5.25L20.25 9l-4.125 4.125L17.25 19.5 12 16.75 6.75 19.5l1.125-6.375L3.75 9l5.75-.75L12 3z"
                   />
                 </svg>
+
               </div>
 
               <div>
+
                 <h2 className="font-bold text-slate-900">
                   Positions & Results
                 </h2>
@@ -1020,6 +914,7 @@ const AdminDashboard = () => {
                 <p className="text-xs text-slate-500">
                   Monitor candidate performance and winners.
                 </p>
+
               </div>
 
             </div>
@@ -1035,6 +930,7 @@ const AdminDashboard = () => {
             <div className="rounded-2xl bg-slate-50 p-10 text-center">
 
               <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
+
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   className="h-7 w-7"
@@ -1049,6 +945,7 @@ const AdminDashboard = () => {
                     d="M12 3l2.5 5.25L20.25 9l-4.125 4.125L17.25 19.5 12 16.75 6.75 19.5l1.125-6.375L3.75 9l5.75-.75L12 3z"
                   />
                 </svg>
+
               </div>
 
               <h3 className="mt-4 font-bold text-slate-800">
@@ -1100,6 +997,7 @@ const AdminDashboard = () => {
                         </div>
 
                         <div>
+
                           <p className="text-xs uppercase tracking-wide text-slate-400">
                             Position
                           </p>
@@ -1107,6 +1005,7 @@ const AdminDashboard = () => {
                           <h3 className="font-bold text-slate-800">
                             {position.position}
                           </h3>
+
                         </div>
 
                       </div>
@@ -1269,6 +1168,7 @@ const AdminDashboard = () => {
 
                     {/* Winner */}
                     {winnerData && (
+
                       <div className="border-t border-emerald-100 bg-emerald-50 px-5 py-4">
 
                         <div className="flex items-center gap-3">
@@ -1300,9 +1200,11 @@ const AdminDashboard = () => {
 
                             <p className="truncate font-bold text-emerald-800">
                               {winnerData.winner.name}
+
                               <span className="ml-2 font-medium">
                                 ({winnerData.maxVotes} votes)
                               </span>
+
                             </p>
 
                           </div>
@@ -1310,12 +1212,368 @@ const AdminDashboard = () => {
                         </div>
 
                       </div>
+
                     )}
 
                   </div>
 
                 );
               })}
+
+            </div>
+
+          )}
+
+        </div>
+
+        {/* =====================================================
+            REGISTERED STUDENTS
+        ===================================================== */}
+        <div className="mb-6 overflow-hidden rounded-3xl border-2 border-violet-200 bg-white shadow-lg shadow-violet-100/60">
+
+          {/* Highlighted Section Header */}
+          <div className="border-b border-violet-200 bg-gradient-to-r from-violet-50 via-purple-50 to-indigo-50 p-5 sm:p-6">
+
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+
+              <div className="flex items-center gap-3">
+
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-violet-600 text-white shadow-md shadow-violet-200">
+
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-6 w-6"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth="1.7"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M15.75 6.75a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z"
+                    />
+
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M4.5 20.25a7.5 7.5 0 0115 0"
+                    />
+                  </svg>
+
+                </div>
+
+                <div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+
+                    <h2 className="font-bold text-slate-900">
+                      Registered Students
+                    </h2>
+
+                    <span className="rounded-full bg-violet-600 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white">
+                      Student Records
+                    </span>
+
+                  </div>
+
+                  <p className="mt-1 text-xs text-slate-500">
+                    Search and manage students registered in the election.
+                  </p>
+
+                </div>
+
+              </div>
+
+              <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center lg:w-auto">
+
+                {/* Class Search */}
+                <div className="relative w-full sm:w-72">
+
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-violet-400"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="m21 21-4.35-4.35m1.35-5.4a6.75 6.75 0 11-13.5 0 6.75 6.75 0 0113.5 0z"
+                    />
+                  </svg>
+
+                  <input
+                    type="text"
+                    value={studentClassSearch}
+                    onChange={(e) =>
+                      setStudentClassSearch(e.target.value)
+                    }
+                    placeholder="Search exact class e.g. X"
+                    className="w-full rounded-xl border-2 border-violet-100 bg-white py-3 pl-10 pr-4 text-sm font-medium text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+                  />
+
+                </div>
+
+                {/* Student Count */}
+                <span className="self-start rounded-full bg-violet-600 px-4 py-2 text-xs font-bold text-white shadow-sm sm:self-auto">
+                  {filteredStudents.length} Students
+                </span>
+
+              </div>
+
+            </div>
+
+            {/* Search Information */}
+            {studentClassSearch.trim() && (
+              <div className="mt-4 flex items-center gap-2 rounded-xl border border-violet-100 bg-white/80 px-4 py-3 text-xs text-violet-700">
+
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-4 w-4 shrink-0"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M13 16h-1v-4h-1m1-4h.01M12 21a9 9 0 100-18 9 9 0 000 18z"
+                  />
+                </svg>
+
+                <span>
+                  Showing students from exact class{" "}
+                  <strong>
+                    "{studentClassSearch.trim()}"
+                  </strong>
+                </span>
+
+              </div>
+            )}
+
+          </div>
+
+          {students.length === 0 ? (
+
+            <div className="p-10 text-center">
+
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
+
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-7 w-7"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth="1.7"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M15.75 6.75a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z"
+                  />
+
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M4.5 20.25a7.5 7.5 0 0115 0"
+                  />
+                </svg>
+
+              </div>
+
+              <h3 className="mt-4 font-bold text-slate-800">
+                No Students Registered
+              </h3>
+
+              <p className="mt-1 text-sm text-slate-500">
+                Registered students will appear here.
+              </p>
+
+            </div>
+
+          ) : (
+
+            <div className="overflow-x-auto">
+
+              <table className="w-full min-w-[720px]">
+
+                <thead>
+
+                  <tr className="bg-violet-50 text-left text-xs uppercase tracking-wider text-violet-700">
+
+                    <th className="px-6 py-4 font-bold">
+                      Student
+                    </th>
+
+                    <th className="px-6 py-4 font-bold">
+                      Class
+                    </th>
+
+                    <th className="px-6 py-4 font-bold">
+                      Section
+                    </th>
+
+                    <th className="px-6 py-4 font-bold">
+                      Vote Number
+                    </th>
+
+                    <th className="px-6 py-4 text-right font-bold">
+                      Action
+                    </th>
+
+                  </tr>
+
+                </thead>
+
+                <tbody className="divide-y divide-violet-50">
+
+                  {filteredStudents.length === 0 ? (
+
+                    <tr>
+
+                      <td
+                        colSpan="5"
+                        className="px-6 py-12 text-center"
+                      >
+
+                        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-violet-50 text-violet-400">
+
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-6 w-6"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            strokeWidth="1.8"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="m21 21-4.35-4.35m1.35-5.4a6.75 6.75 0 11-13.5 0 6.75 6.75 0 0113.5 0z"
+                            />
+                          </svg>
+
+                        </div>
+
+                        <p className="mt-3 font-semibold text-slate-700">
+                          No students found
+                        </p>
+
+                        <p className="mt-1 text-sm text-slate-500">
+                          No students belong to class "
+                          {studentClassSearch.trim()}".
+                        </p>
+
+                      </td>
+
+                    </tr>
+
+                  ) : (
+
+                    filteredStudents.map((student) => (
+
+                      <tr
+                        key={student._id}
+                        className="transition hover:bg-violet-50/50"
+                      >
+
+                        <td className="px-6 py-4">
+
+                          <div className="flex items-center gap-3">
+
+                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-100 font-bold text-violet-600">
+
+                              {student.username
+                                ?.charAt(0)
+                                ?.toUpperCase()}
+
+                            </div>
+
+                            <div>
+
+                              <p className="font-semibold text-slate-800">
+                                {student.username}
+                              </p>
+
+                              <p className="text-xs text-slate-400">
+                                Student
+                              </p>
+
+                            </div>
+
+                          </div>
+
+                        </td>
+
+                        <td className="px-6 py-4">
+
+                          <span className="inline-flex rounded-lg bg-violet-100 px-3 py-1.5 text-sm font-bold text-violet-700">
+                            {student.class}
+                          </span>
+
+                        </td>
+
+                        <td className="px-6 py-4">
+
+                          <span className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600">
+                            {student.section}
+                          </span>
+
+                        </td>
+
+                        <td className="px-6 py-4">
+
+                          <span className="rounded-lg bg-violet-50 px-3 py-1.5 text-sm font-bold text-violet-600">
+                            {student.voteNumber}
+                          </span>
+
+                        </td>
+
+                        <td className="px-6 py-4 text-right">
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              deleteStudent(student._id)
+                            }
+                            className="inline-flex items-center gap-2 rounded-xl bg-red-50 px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-100"
+                          >
+
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="h-4 w-4"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                              strokeWidth="1.8"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M6 7.5h12M9.75 7.5V5.25h4.5V7.5m-6.75 0l.75 12h7.5l.75-12"
+                              />
+                            </svg>
+
+                            Delete
+
+                          </button>
+
+                        </td>
+
+                      </tr>
+
+                    ))
+
+                  )}
+
+                </tbody>
+
+              </table>
 
             </div>
 
@@ -1344,4 +1602,3 @@ const AdminDashboard = () => {
 };
 
 export default AdminDashboard;
-
