@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -7,6 +6,8 @@ import api from "../api";
 const StudentRegister = () => {
   const [formData, setFormData] = useState({
     username: "",
+    fatherName: "",
+    password: "",
     studentClass: "",
     section: "",
     voteNumber: "",
@@ -23,7 +24,6 @@ const StudentRegister = () => {
       [name]: value,
     }));
 
-    // Remove server error when user starts typing again
     if (errorMessage) {
       setErrorMessage("");
     }
@@ -32,10 +32,20 @@ const StudentRegister = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const { username, studentClass, section, voteNumber } = formData;
+    const { username, fatherName, password, studentClass, section, voteNumber } = formData;
 
     if (!username.trim()) {
       toast.warning("Please enter the student's username.");
+      return;
+    }
+
+    if (!fatherName.trim()) {
+      toast.warning("Please enter the father's name.");
+      return;
+    }
+
+    if (!password) {
+      toast.warning("Please enter a password.");
       return;
     }
 
@@ -60,6 +70,8 @@ const StudentRegister = () => {
 
       const response = await api.post("/student/register", {
         username: username.trim(),
+        fatherName: fatherName.trim(),
+        password,
         class: studentClass.trim(),
         section: section.trim(),
         voteNumber,
@@ -70,6 +82,8 @@ const StudentRegister = () => {
 
         setFormData({
           username: "",
+          fatherName: "",
+          password: "",
           studentClass: "",
           section: "",
           voteNumber: "",
@@ -96,8 +110,6 @@ const StudentRegister = () => {
 
           {/* Left Information Panel */}
           <div className="relative hidden overflow-hidden bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700 p-10 text-white lg:col-span-2 lg:flex lg:flex-col lg:justify-between">
-            
-            {/* Decorative circles */}
             <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-white/10" />
             <div className="absolute -bottom-24 -left-20 h-72 w-72 rounded-full bg-white/10" />
 
@@ -152,8 +164,7 @@ const StudentRegister = () => {
                   <div>
                     <p className="font-semibold">Before registering</p>
                     <p className="mt-1 text-xs leading-5 text-purple-100">
-                      Check the username, class, section and vote number
-                      carefully.
+                      Check the username, father's name, password, class, section, and vote number carefully.
                     </p>
                   </div>
                 </div>
@@ -163,8 +174,6 @@ const StudentRegister = () => {
 
           {/* Form Section */}
           <div className="p-6 sm:p-8 lg:col-span-3 lg:p-12">
-            
-            {/* Mobile Header */}
             <div className="mb-8 lg:hidden">
               <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-violet-100 text-violet-600">
                 <svg
@@ -192,7 +201,6 @@ const StudentRegister = () => {
               </p>
             </div>
 
-            {/* Desktop Header */}
             <div className="mb-8 hidden lg:block">
               <div className="flex items-center gap-3">
                 <div>
@@ -211,7 +219,6 @@ const StudentRegister = () => {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-5">
-
               {/* Username */}
               <div>
                 <label
@@ -252,9 +259,87 @@ const StudentRegister = () => {
                 </div>
               </div>
 
+              {/* Father Name */}
+              <div>
+                <label
+                  htmlFor="fatherName"
+                  className="mb-2 block text-sm font-semibold text-slate-700"
+                >
+                  Father's Name
+                </label>
+
+                <div className="relative">
+                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-5 w-5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M15.75 6.75a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.5 20.25a7.5 7.5 0 0115 0"
+                      />
+                    </svg>
+                  </div>
+
+                  <input
+                    id="fatherName"
+                    name="fatherName"
+                    type="text"
+                    value={formData.fatherName}
+                    onChange={handleChange}
+                    placeholder="Enter father's name"
+                    autoComplete="off"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3.5 pl-12 pr-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 hover:border-slate-300 focus:border-violet-500 focus:bg-white focus:ring-4 focus:ring-violet-500/10"
+                  />
+                </div>
+              </div>
+
+              {/* Password */}
+              <div>
+                <label
+                  htmlFor="password"
+                  className="mb-2 block text-sm font-semibold text-slate-700"
+                >
+                  Password
+                </label>
+
+                <div className="relative">
+                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-5 w-5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 12v6.75a2.25 2.25 0 002.25 2.25z"
+                      />
+                    </svg>
+                  </div>
+
+                  <input
+                    id="password"
+                    name="password"
+                    type="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    placeholder="Enter student password"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3.5 pl-12 pr-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 hover:border-slate-300 focus:border-violet-500 focus:bg-white focus:ring-4 focus:ring-violet-500/10"
+                  />
+                </div>
+              </div>
+
               {/* Class + Section */}
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-
                 {/* Class */}
                 <div>
                   <label
@@ -379,7 +464,7 @@ const StudentRegister = () => {
                   <input
                     id="voteNumber"
                     name="voteNumber"
-                    type="number"
+                    type="text"
                     min="0"
                     value={formData.voteNumber}
                     onChange={handleChange}
@@ -389,7 +474,7 @@ const StudentRegister = () => {
                 </div>
               </div>
 
-              {/* Error */}
+              {/* Error Alert */}
               {errorMessage && (
                 <div className="flex items-start gap-3 rounded-xl border border-red-100 bg-red-50 p-4 text-sm text-red-700">
                   <svg
@@ -444,7 +529,6 @@ const StudentRegister = () => {
                 ) : (
                   <>
                     Register Student
-
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       className="h-5 w-5 transition-transform duration-200 group-hover:translate-x-1"
@@ -475,4 +559,3 @@ const StudentRegister = () => {
 };
 
 export default StudentRegister;
-

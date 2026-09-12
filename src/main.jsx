@@ -14,7 +14,7 @@ import Admin from "./pages/Admin";
 const router = createBrowserRouter([
   {
     path: "/",
-    element: <Home />,
+    element: <Vote />,
   },
   {
     path:"/registerstudent",
@@ -30,8 +30,13 @@ const router = createBrowserRouter([
   },
   {
     path:"/admin",
+    element:<Home/>  
+  },
+{
+    path:"/results",
     element:<Admin/>  
   }
+
 ]);
 
 ReactDOM.createRoot(document.getElementById("root")).render(

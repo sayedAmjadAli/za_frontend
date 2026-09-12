@@ -1,10 +1,10 @@
-
 import React, { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import api from "../api";
 
 const VoteForm = () => {
-  const [voteNumber, setVoteNumber] = useState("");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [student, setStudent] = useState(null);
   const [positions, setPositions] = useState([]);
   const [selectedCandidates, setSelectedCandidates] = useState({});
@@ -17,9 +17,7 @@ const VoteForm = () => {
   const fetchPositions = async () => {
     try {
       setLoadingPositions(true);
-
       const response = await api.get("/candidate/Positions");
-
       setPositions(response.data.positions || []);
     } catch (error) {
       console.error("Error fetching positions:", error);
@@ -33,39 +31,41 @@ const VoteForm = () => {
     fetchPositions();
   }, []);
 
-  // Fetch student by vote number
-  const fetchStudent = async () => {
-    if (!voteNumber.trim()) {
-      toast.warning("Please enter vote number.");
+  // Login / Verify student with username and password
+  const handleStudentLogin = async (e) => {
+    if (e) e.preventDefault();
+
+    if (!username.trim() || !password.trim()) {
+      toast.warning("Please enter both username and password.");
       return;
     }
 
     try {
       setFetchingStudent(true);
 
-      const response = await api.get(
-        `/student/getStudentByVoteNumber/${voteNumber.trim()}`
-      );
+      // POST request sent to student controller endpoint
+      const response = await api.post("/student/login", {
+        username: username.trim(),
+        password: password.trim(),
+      });
 
       if (response.data?.student) {
         setStudent(response.data.student);
 
-        // Reset previous selections when changing student
+        // Reset previous selections when logged in as a new student
         setSelectedCandidates({});
         setVotedPositions([]);
 
-        toast.success("Student verified successfully!");
+        toast.success("Student logged in successfully!");
       } else {
         setStudent(null);
-        toast.error("Student not found.");
+        toast.error("Invalid credentials.");
       }
     } catch (error) {
-      console.error("Student lookup error:", error);
-
+      console.error("Student login error:", error);
       setStudent(null);
-
       toast.error(
-        error.response?.data?.message || "Student not found. Please check the vote number."
+        error.response?.data?.message || "Invalid username or password."
       );
     } finally {
       setFetchingStudent(false);
@@ -92,7 +92,7 @@ const VoteForm = () => {
     }
 
     if (!student) {
-      toast.warning("Please verify the student first.");
+      toast.warning("Please log in first.");
       return;
     }
 
@@ -106,7 +106,6 @@ const VoteForm = () => {
       });
 
       toast.success(`Vote successfully submitted for ${position}!`);
-
       setVotedPositions((prev) => [...prev, position]);
 
       // Remove selection after successful vote
@@ -117,7 +116,6 @@ const VoteForm = () => {
       });
     } catch (error) {
       console.error("Vote error:", error);
-
       toast.error(
         error.response?.data?.message || "Error casting vote. Please try again."
       );
@@ -137,13 +135,11 @@ const VoteForm = () => {
   return (
     <div className="min-h-screen bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-6xl">
-
         {/* =========================================================
             HEADER
         ========================================================= */}
         <div className="mb-6 overflow-hidden rounded-3xl bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700 p-6 text-white shadow-xl shadow-purple-200/50 sm:p-8">
           <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-
             <div className="flex items-start gap-4">
               <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/15 backdrop-blur-sm">
                 <svg
@@ -171,14 +167,11 @@ const VoteForm = () => {
                 <p className="text-sm font-medium text-purple-100">
                   Student Election
                 </p>
-
                 <h1 className="mt-1 text-2xl font-bold sm:text-3xl">
                   Cast Your Vote
                 </h1>
-
                 <p className="mt-2 max-w-xl text-sm leading-6 text-purple-100">
-                  Verify the student and select one candidate for each
-                  available position.
+                  Log in with your credentials and select one candidate for each available position.
                 </p>
               </div>
             </div>
@@ -187,10 +180,7 @@ const VoteForm = () => {
             {student && (
               <div className="min-w-[180px] rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur-sm">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-purple-100">
-                    Voting Progress
-                  </span>
-
+                  <span className="text-purple-100">Voting Progress</span>
                   <span className="font-bold">
                     {votedCount}/{totalPositions}
                   </span>
@@ -214,42 +204,12 @@ const VoteForm = () => {
         </div>
 
         {/* =========================================================
-            STUDENT SEARCH
+            STUDENT LOGIN FORM
         ========================================================= */}
-        <div className="mb-6 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-
-          <div className="mb-5 flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-violet-100 text-violet-600">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth="1.8"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M15.75 6.75a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.5 20.25a7.5 7.5 0 0115 0"
-                />
-              </svg>
-            </div>
-
-            <div>
-              <h2 className="font-bold text-slate-900">
-                Verify Student
-              </h2>
-
-              <p className="text-xs text-slate-500">
-                Enter the student's vote number to continue.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <div className="relative flex-1">
-              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
+        {!student ? (
+          <div className="mb-6 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+            <div className="mb-5 flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-violet-100 text-violet-600">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   className="h-5 w-5"
@@ -261,62 +221,111 @@ const VoteForm = () => {
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    d="M9 5.25h6M9 8.25h6M6.75 4.5h10.5A2.25 2.25 0 0119.5 6.75v10.5a2.25 2.25 0 01-2.25 2.25H6.75a2.25 2.25 0 01-2.25-2.25V6.75A2.25 2.25 0 016.75 4.5z"
+                    d="M15.75 6.75a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.5 20.25a7.5 7.5 0 0115 0"
                   />
                 </svg>
               </div>
 
-              <input
-                type="text"
-                value={voteNumber}
-                onChange={(e) => setVoteNumber(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    fetchStudent();
-                  }
-                }}
-                placeholder="Enter vote number"
-                disabled={fetchingStudent}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3.5 pl-12 pr-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 hover:border-slate-300 focus:border-violet-500 focus:bg-white focus:ring-4 focus:ring-violet-500/10 disabled:cursor-not-allowed disabled:opacity-60"
-              />
+              <div>
+                <h2 className="font-bold text-slate-900">Student Login</h2>
+                <p className="text-xs text-slate-500">
+                  Enter your username and password to vote.
+                </p>
+              </div>
             </div>
 
-            <button
-              type="button"
-              onClick={fetchStudent}
-              disabled={fetchingStudent}
-              className="flex min-h-[50px] items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-7 text-sm font-semibold text-white shadow-lg shadow-violet-500/20 transition duration-200 hover:-translate-y-0.5 hover:from-violet-700 hover:to-indigo-700 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
-            >
-              {fetchingStudent ? (
-                <>
-                  <svg
-                    className="h-5 w-5 animate-spin"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
+            <form onSubmit={handleStudentLogin} className="space-y-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                {/* Username Field */}
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-slate-600">
+                    Username
+                  </label>
+                  <input
+                    type="text"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="Enter username"
+                    disabled={fetchingStudent}
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 px-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 hover:border-slate-300 focus:border-violet-500 focus:bg-white focus:ring-4 focus:ring-violet-500/10 disabled:cursor-not-allowed disabled:opacity-60"
+                  />
+                </div>
+
+                {/* Password Field */}
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-slate-600">
+                    Password
+                  </label>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Enter password"
+                    disabled={fetchingStudent}
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 px-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 hover:border-slate-300 focus:border-violet-500 focus:bg-white focus:ring-4 focus:ring-violet-500/10 disabled:cursor-not-allowed disabled:opacity-60"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={fetchingStudent}
+                className="flex w-full min-h-[48px] items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-7 text-sm font-semibold text-white shadow-lg shadow-violet-500/20 transition duration-200 hover:-translate-y-0.5 hover:from-violet-700 hover:to-indigo-700 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
+              >
+                {fetchingStudent ? (
+                  <>
+                    <svg
+                      className="h-5 w-5 animate-spin"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      />
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                      />
+                    </svg>
+                    Authenticating...
+                  </>
+                ) : (
+                  <>
+                    Login & Verify
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-5 w-5"
+                      fill="none"
+                      viewBox="0 0 24 24"
                       stroke="currentColor"
-                      strokeWidth="4"
-                    />
-
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-                    />
-                  </svg>
-
-                  Checking...
-                </>
-              ) : (
-                <>
-                  Verify Student
-
+                      strokeWidth="1.8"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M13.5 6l6 6-6 6M18.5 12H4.5"
+                      />
+                    </svg>
+                  </>
+                )}
+              </button>
+            </form>
+          </div>
+        ) : (
+          /* =========================================================
+              STUDENT INFORMATION (SHOWS AFTER SUCCESSFUL LOGIN)
+          ========================================================= */
+          <div className="mb-6 overflow-hidden rounded-3xl border border-emerald-100 bg-white shadow-sm">
+            <div className="flex items-center justify-between border-b border-slate-100 bg-emerald-50/70 px-5 py-4 sm:px-6">
+              <div className="flex items-center gap-4">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     className="h-5 w-5"
@@ -328,53 +337,31 @@ const VoteForm = () => {
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
-                      d="M13.5 6l6 6-6 6M18.5 12H4.5"
+                      d="M9 12.75l2 2 4-4.5"
+                    />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M12 3l7.5 4.5v5.25c0 4.5-3.25 7.5-7.5 8.25-4.25-.75-7.5-3.75-7.5-8.25V7.5L12 3z"
                     />
                   </svg>
-                </>
-              )}
-            </button>
-          </div>
-        </div>
+                </div>
 
-        {/* =========================================================
-            STUDENT INFORMATION
-        ========================================================= */}
-        {student && (
-          <div className="mb-6 overflow-hidden rounded-3xl border border-emerald-100 bg-white shadow-sm">
-
-            <div className="flex items-center gap-4 border-b border-slate-100 bg-emerald-50/70 px-5 py-4 sm:px-6">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M9 12.75l2 2 4-4.5"
-                  />
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M12 3l7.5 4.5v5.25c0 4.5-3.25 7.5-7.5 8.25-4.25-.75-7.5-3.75-7.5-8.25V7.5L12 3z"
-                  />
-                </svg>
+                <div>
+                  <h2 className="font-bold text-slate-900">Student Verified</h2>
+                  <p className="text-xs text-emerald-600">
+                    Logged in as {student.username}.
+                  </p>
+                </div>
               </div>
 
-              <div>
-                <h2 className="font-bold text-slate-900">
-                  Student Verified
-                </h2>
-
-                <p className="text-xs text-emerald-600">
-                  Student information has been successfully verified.
-                </p>
-              </div>
+              <button
+                type="button"
+                onClick={() => setStudent(null)}
+                className="rounded-lg bg-white px-3 py-1.5 text-xs font-medium text-slate-600 shadow-sm border border-slate-200 hover:bg-slate-50"
+              >
+                Change Student
+              </button>
             </div>
 
             <div className="grid grid-cols-1 gap-px bg-slate-100 sm:grid-cols-2 lg:grid-cols-4">
@@ -382,7 +369,6 @@ const VoteForm = () => {
                 <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
                   Username
                 </p>
-
                 <p className="mt-1 truncate font-semibold text-slate-800">
                   {student.username}
                 </p>
@@ -392,7 +378,6 @@ const VoteForm = () => {
                 <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
                   Class
                 </p>
-
                 <p className="mt-1 font-semibold text-slate-800">
                   {student.class}
                 </p>
@@ -402,7 +387,6 @@ const VoteForm = () => {
                 <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
                   Section
                 </p>
-
                 <p className="mt-1 font-semibold text-slate-800">
                   {student.section}
                 </p>
@@ -412,9 +396,8 @@ const VoteForm = () => {
                 <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
                   Vote Number
                 </p>
-
                 <p className="mt-1 font-semibold text-violet-600">
-                  {student.voteNumber}
+                  {student.voteNumber || "N/A"}
                 </p>
               </div>
             </div>
@@ -440,14 +423,12 @@ const VoteForm = () => {
                 stroke="currentColor"
                 strokeWidth="4"
               />
-
               <path
                 className="opacity-75"
                 fill="currentColor"
                 d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
               />
             </svg>
-
             <p className="mt-3 text-sm font-medium text-slate-600">
               Loading positions...
             </p>
@@ -459,13 +440,11 @@ const VoteForm = () => {
         ========================================================= */}
         {student && !loadingPositions && positions.length > 0 && (
           <div className="space-y-5">
-
             <div className="flex items-end justify-between">
               <div>
                 <p className="text-sm font-medium text-violet-600">
                   Election Positions
                 </p>
-
                 <h2 className="mt-1 text-xl font-bold text-slate-900">
                   Choose Your Candidates
                 </h2>
@@ -530,7 +509,6 @@ const VoteForm = () => {
                         <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
                           Position {index + 1}
                         </p>
-
                         <h3 className="mt-0.5 text-lg font-bold text-slate-800">
                           {pos.position}
                         </h3>
@@ -547,7 +525,6 @@ const VoteForm = () => {
 
                   {/* Candidates */}
                   <div className="p-5 sm:p-6">
-
                     {pos.candidates?.length > 0 ? (
                       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                         {pos.candidates.map((candidate) => {
@@ -580,7 +557,6 @@ const VoteForm = () => {
                                 className="sr-only"
                               />
 
-                              {/* Custom Radio */}
                               <div
                                 className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition ${
                                   isSelected
@@ -603,7 +579,6 @@ const VoteForm = () => {
                                 >
                                   {candidate.name}
                                 </p>
-
                                 <p className="mt-0.5 text-xs text-slate-400">
                                   {isSelected
                                     ? "Selected candidate"
@@ -611,7 +586,6 @@ const VoteForm = () => {
                                 </p>
                               </div>
 
-                              {/* Check */}
                               <div
                                 className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition ${
                                   isSelected
@@ -671,20 +645,17 @@ const VoteForm = () => {
                                   stroke="currentColor"
                                   strokeWidth="4"
                                 />
-
                                 <path
                                   className="opacity-75"
                                   fill="currentColor"
                                   d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
                                 />
                               </svg>
-
                               Submitting...
                             </>
                           ) : (
                             <>
                               Submit Vote
-
                               <svg
                                 xmlns="http://www.w3.org/2000/svg"
                                 className="h-5 w-5"
@@ -736,7 +707,6 @@ const VoteForm = () => {
             <h3 className="mt-4 font-bold text-slate-800">
               No Voting Positions Available
             </h3>
-
             <p className="mt-1 text-sm text-slate-500">
               There are currently no positions available for voting.
             </p>
@@ -789,4 +759,3 @@ const VoteForm = () => {
 };
 
 export default VoteForm;
-

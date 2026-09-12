@@ -1,14 +1,14 @@
+
 import React, { useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
 import api from "../api";
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
+  PieChart,
+  Pie,
+  Cell,
   Tooltip,
   ResponsiveContainer,
+  Legend,
 } from "recharts";
 
 const AdminDashboard = () => {
@@ -29,11 +29,6 @@ const AdminDashboard = () => {
       return students;
     }
 
-    // Exact class matching:
-    // X  -> only X
-    // V  -> only V
-    // XI -> only XI
-    // VIII -> only VIII
     return students.filter((student) => {
       const studentClass = String(student.class || "")
         .trim()
@@ -55,6 +50,7 @@ const AdminDashboard = () => {
 
     try {
       const studentsRes = await api.get("/student/getStudents");
+
       console.log("STUDENTS API RESPONSE:", studentsRes.data);
 
       setStudents(
@@ -77,6 +73,7 @@ const AdminDashboard = () => {
 
     try {
       const positionsRes = await api.get("/candidate/Positions");
+
       console.log("POSITIONS API RESPONSE:", positionsRes.data);
 
       setPositions(
@@ -95,6 +92,7 @@ const AdminDashboard = () => {
 
     try {
       const votesRes = await api.get("/vote/getVotes");
+
       console.log("VOTES API RESPONSE:", votesRes.data);
 
       setVotes(
@@ -179,7 +177,7 @@ const AdminDashboard = () => {
   const getVoteCount = (candidateId, position) => {
     return votes.filter(
       (v) =>
-        v.candidate === candidateId &&
+        String(v.candidate) === String(candidateId) &&
         v.position === position
     ).length;
   };
@@ -222,25 +220,45 @@ const AdminDashboard = () => {
   }, [positions]);
 
   const totalPositions = positions.length;
-
   const totalStudents = students.length;
-
   const totalVotes = votes.length;
 
   // =========================================================
-  // CHART DATA
+  // PIE CHART DATA
   // =========================================================
   const chartData = useMemo(() => {
-    return positions
-      .flatMap((position) =>
-        (position.candidates || []).map((candidate) => ({
-          candidate: candidate.name,
-          position: position.position,
-          votes: getVoteCount(candidate._id, position.position),
-        }))
-      )
-      .sort((a, b) => b.votes - a.votes);
+    return positions.flatMap((position) =>
+      (position.candidates || []).map((candidate) => ({
+        candidate: candidate.name,
+        position: position.position,
+        votes: getVoteCount(candidate._id, position.position),
+      }))
+    );
   }, [positions, votes]);
+
+  // Pie chart colors
+  const PIE_COLORS = [
+    "#7c3aed",
+    "#4f46e5",
+    "#2563eb",
+    "#0891b2",
+    "#059669",
+    "#65a30d",
+    "#ca8a04",
+    "#ea580c",
+    "#dc2626",
+    "#db2777",
+  ];
+
+  // =========================================================
+  // TOTAL VOTES IN PIE CHART
+  // =========================================================
+  const pieTotalVotes = useMemo(() => {
+    return chartData.reduce(
+      (total, item) => total + item.votes,
+      0
+    );
+  }, [chartData]);
 
   // =========================================================
   // EXPORT RESULTS
@@ -349,15 +367,13 @@ const AdminDashboard = () => {
 
         {/* =====================================================
             HEADER
-        ===================================================== */}
+        ====================================================== */}
         <div className="mb-6 overflow-hidden rounded-3xl bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700 p-6 text-white shadow-xl shadow-purple-200/50 sm:p-8">
-
           <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
 
             <div className="flex items-start gap-4">
 
               <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/15 backdrop-blur-sm">
-
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   className="h-7 w-7"
@@ -384,7 +400,6 @@ const AdminDashboard = () => {
                     d="M4.5 19.5h15"
                   />
                 </svg>
-
               </div>
 
               <div>
@@ -404,7 +419,6 @@ const AdminDashboard = () => {
 
             </div>
 
-            {/* Header Actions */}
             <div className="flex flex-col gap-3 sm:flex-row">
 
               <button
@@ -492,12 +506,11 @@ const AdminDashboard = () => {
 
         {/* =====================================================
             STATISTICS
-        ===================================================== */}
+        ====================================================== */}
         <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
 
           {/* Students */}
           <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-md">
-
             <div className="flex items-center justify-between">
 
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-violet-100 text-violet-600">
@@ -536,12 +549,10 @@ const AdminDashboard = () => {
             <p className="mt-1 text-sm text-slate-500">
               Registered students
             </p>
-
           </div>
 
           {/* Candidates */}
           <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-md">
-
             <div className="flex items-center justify-between">
 
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-100 text-indigo-600">
@@ -570,7 +581,6 @@ const AdminDashboard = () => {
               <span className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-600">
                 Candidates
               </span>
-
             </div>
 
             <p className="mt-5 text-3xl font-bold text-slate-900">
@@ -580,12 +590,10 @@ const AdminDashboard = () => {
             <p className="mt-1 text-sm text-slate-500">
               Registered candidates
             </p>
-
           </div>
 
           {/* Positions */}
           <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-md">
-
             <div className="flex items-center justify-between">
 
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100 text-amber-600">
@@ -608,7 +616,6 @@ const AdminDashboard = () => {
               <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-600">
                 Positions
               </span>
-
             </div>
 
             <p className="mt-5 text-3xl font-bold text-slate-900">
@@ -618,12 +625,10 @@ const AdminDashboard = () => {
             <p className="mt-1 text-sm text-slate-500">
               Election positions
             </p>
-
           </div>
 
           {/* Votes */}
           <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-md">
-
             <div className="flex items-center justify-between">
 
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-600">
@@ -652,7 +657,6 @@ const AdminDashboard = () => {
               <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-600">
                 Votes
               </span>
-
             </div>
 
             <p className="mt-5 text-3xl font-bold text-slate-900">
@@ -662,14 +666,12 @@ const AdminDashboard = () => {
             <p className="mt-1 text-sm text-slate-500">
               Votes submitted
             </p>
-
           </div>
-
         </div>
 
         {/* =====================================================
-            ELECTION RESULTS CHART
-        ===================================================== */}
+            ELECTION RESULTS PIE CHART
+        ====================================================== */}
         <div className="mb-6 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
 
           <div className="border-b border-slate-100 bg-gradient-to-r from-white to-violet-50/60 px-5 py-5 sm:px-6">
@@ -690,7 +692,13 @@ const AdminDashboard = () => {
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
-                      d="M4.5 19.5V11m5 8.5V6.5m5 13V9m5 10.5V3.5"
+                      d="M11.25 3.75a8.25 8.25 0 108.25 8.25h-8.25V3.75z"
+                    />
+
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M13.5 3.75v6h6"
                     />
                   </svg>
                 </div>
@@ -701,7 +709,7 @@ const AdminDashboard = () => {
                   </h2>
 
                   <p className="text-xs text-slate-500">
-                    Live vote comparison across all Students Council candidates.
+                    Live vote distribution across all Students Council candidates.
                   </p>
                 </div>
 
@@ -722,7 +730,7 @@ const AdminDashboard = () => {
             </div>
           </div>
 
-          {chartData.length === 0 ? (
+          {chartData.length === 0 || pieTotalVotes === 0 ? (
 
             <div className="flex min-h-[360px] items-center justify-center p-6">
 
@@ -741,7 +749,13 @@ const AdminDashboard = () => {
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
-                      d="M3.75 18.75h16.5M6.75 15.75v3m3.75-6v6m3.75-9v9m3.75-12v12"
+                      d="M11.25 3.75a8.25 8.25 0 108.25 8.25h-8.25V3.75z"
+                    />
+
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M13.5 3.75v6h6"
                     />
                   </svg>
 
@@ -766,65 +780,76 @@ const AdminDashboard = () => {
               <div className="mb-5 flex flex-wrap items-center gap-2">
 
                 <span className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600">
-                  Highest vote: {chartData[0]?.votes || 0}
+                  Highest vote:{" "}
+                  {Math.max(
+                    ...chartData.map((item) => item.votes)
+                  )}
                 </span>
 
                 <span className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600">
                   {chartData.length} Candidates
                 </span>
 
+                <span className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600">
+                  {pieTotalVotes} Votes in Chart
+                </span>
+
               </div>
 
-              <div className="h-[430px] w-full">
+              <div className="h-[500px] w-full">
 
                 <ResponsiveContainer width="100%" height="100%">
 
-                  <BarChart
-                    data={chartData}
-                    margin={{
-                      top: 10,
-                      right: 25,
-                      left: 20,
-                      bottom: 10,
-                    }}
-                    barCategoryGap="22%"
-                  >
+                  <PieChart>
 
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      horizontal={false}
-                    />
+                    <Pie
+                      data={chartData}
+                      dataKey="votes"
+                      nameKey="candidate"
+                      cx="50%"
+                      cy="45%"
+                      outerRadius="70%"
+                      innerRadius="0%"
+                      paddingAngle={2}
+                      label={({ candidate, percent }) =>
+                        `${candidate} (${Math.round(percent * 100)}%)`
+                      }
+                      labelLine={true}
+                    >
 
-                    <XAxis
-                      dataKey="candidate"
-                      axisLine={false}
-                      tickLine={false}
-                      interval={0}
-                      angle={-35}
-                      textAnchor="end"
-                      height={90}
-                      tick={{ fontSize: 11 }}
-                    />
+                      {chartData.map((entry, index) => (
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={
+                            PIE_COLORS[
+                              index % PIE_COLORS.length
+                            ]
+                          }
+                        />
+                      ))}
 
-                    <YAxis
-                      type="number"
-                      allowDecimals={false}
-                      axisLine={false}
-                      tickLine={false}
-                      width={45}
-                      tick={{ fontSize: 12 }}
-                    />
+                    </Pie>
 
                     <Tooltip
-                      cursor={{ fill: "rgba(139, 92, 246, 0.06)" }}
                       content={({ active, payload }) => {
 
-                        if (!active || !payload?.length) return null;
+                        if (!active || !payload?.length) {
+                          return null;
+                        }
 
                         const item = payload[0].payload;
 
+                        const percentage =
+                          pieTotalVotes > 0
+                            ? Math.round(
+                                (item.votes /
+                                  pieTotalVotes) *
+                                  100
+                              )
+                            : 0;
+
                         return (
-                          <div className="min-w-[190px] rounded-2xl border border-slate-200 bg-white p-4 shadow-xl">
+                          <div className="min-w-[210px] rounded-2xl border border-slate-200 bg-white p-4 shadow-xl">
 
                             <p className="font-bold text-slate-900">
                               {item.candidate}
@@ -846,26 +871,27 @@ const AdminDashboard = () => {
 
                             </div>
 
+                            <p className="mt-2 text-xs font-semibold text-slate-500">
+                              {percentage}% of chart votes
+                            </p>
+
                           </div>
                         );
                       }}
                     />
 
-                    <Bar
-                      dataKey="votes"
-                      name="Votes"
-                      radius={[10, 10, 0, 0]}
-                      maxBarSize={56}
-                      fill="#7c3aed"
-                      label={{
-                        position: "top",
-                        fill: "#475569",
-                        fontSize: 12,
-                        fontWeight: 700,
-                      }}
+                    <Legend
+                      verticalAlign="bottom"
+                      height={55}
+                      iconType="circle"
+                      formatter={(value) => (
+                        <span className="text-xs font-semibold text-slate-600">
+                          {value}
+                        </span>
+                      )}
                     />
 
-                  </BarChart>
+                  </PieChart>
 
                 </ResponsiveContainer>
 
@@ -879,7 +905,7 @@ const AdminDashboard = () => {
 
         {/* =====================================================
             POSITIONS & RESULTS
-        ===================================================== */}
+        ====================================================== */}
         <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
 
           <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -894,7 +920,7 @@ const AdminDashboard = () => {
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
-                  strokeWidth="1.7"
+                  strokeWidth="1.8"
                 >
                   <path
                     strokeLinecap="round"
@@ -1199,6 +1225,7 @@ const AdminDashboard = () => {
                             </p>
 
                             <p className="truncate font-bold text-emerald-800">
+
                               {winnerData.winner.name}
 
                               <span className="ml-2 font-medium">
@@ -1216,7 +1243,6 @@ const AdminDashboard = () => {
                     )}
 
                   </div>
-
                 );
               })}
 
@@ -1228,8 +1254,8 @@ const AdminDashboard = () => {
 
         {/* =====================================================
             REGISTERED STUDENTS
-        ===================================================== */}
-        <div className="mb-6 overflow-hidden rounded-3xl border-2 border-violet-200 bg-white shadow-lg shadow-violet-100/60">
+        ====================================================== */}
+        <div className="mb-6 mt-6 overflow-hidden rounded-3xl border-2 border-violet-200 bg-white shadow-lg shadow-violet-100/60">
 
           {/* Highlighted Section Header */}
           <div className="border-b border-violet-200 bg-gradient-to-r from-violet-50 via-purple-50 to-indigo-50 p-5 sm:p-6">
@@ -1400,7 +1426,7 @@ const AdminDashboard = () => {
 
             <div className="overflow-x-auto">
 
-              <table className="w-full min-w-[720px]">
+              <table className="w-full min-w-[900px]">
 
                 <thead>
 
@@ -1408,6 +1434,10 @@ const AdminDashboard = () => {
 
                     <th className="px-6 py-4 font-bold">
                       Student
+                    </th>
+
+                    <th className="px-6 py-4 font-bold">
+                      Father Name
                     </th>
 
                     <th className="px-6 py-4 font-bold">
@@ -1437,7 +1467,7 @@ const AdminDashboard = () => {
                     <tr>
 
                       <td
-                        colSpan="5"
+                        colSpan="6"
                         className="px-6 py-12 text-center"
                       >
 
@@ -1482,6 +1512,7 @@ const AdminDashboard = () => {
                         className="transition hover:bg-violet-50/50"
                       >
 
+                        {/* Student Username */}
                         <td className="px-6 py-4">
 
                           <div className="flex items-center gap-3">
@@ -1510,6 +1541,16 @@ const AdminDashboard = () => {
 
                         </td>
 
+                        {/* Father Name */}
+                        <td className="px-6 py-4">
+
+                          <p className="font-medium text-slate-700">
+                            {student.fatherName}
+                          </p>
+
+                        </td>
+
+                        {/* Class */}
                         <td className="px-6 py-4">
 
                           <span className="inline-flex rounded-lg bg-violet-100 px-3 py-1.5 text-sm font-bold text-violet-700">
@@ -1518,6 +1559,7 @@ const AdminDashboard = () => {
 
                         </td>
 
+                        {/* Section */}
                         <td className="px-6 py-4">
 
                           <span className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600">
@@ -1526,6 +1568,7 @@ const AdminDashboard = () => {
 
                         </td>
 
+                        {/* Vote Number */}
                         <td className="px-6 py-4">
 
                           <span className="rounded-lg bg-violet-50 px-3 py-1.5 text-sm font-bold text-violet-600">
@@ -1534,6 +1577,7 @@ const AdminDashboard = () => {
 
                         </td>
 
+                        {/* Action */}
                         <td className="px-6 py-4 text-right">
 
                           <button
@@ -1583,7 +1627,7 @@ const AdminDashboard = () => {
 
         {/* =====================================================
             FOOTER
-        ===================================================== */}
+        ====================================================== */}
         <div className="py-6 text-center">
 
           <p className="text-xs text-slate-400">
