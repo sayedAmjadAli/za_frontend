@@ -6,7 +6,6 @@ import api from "../api";
 const CandidateManager = () => {
   const [positions, setPositions] = useState([]);
   const [position, setPosition] = useState("");
-  // Form structure for position creation: name and file object
   const [candidates, setCandidates] = useState([{ name: "", profile: null }]);
 
   // Add single candidate state
@@ -16,18 +15,28 @@ const CandidateManager = () => {
 
   const [loading, setLoading] = useState(false);
 
-  // Updated Base URL to match port 3000 static file serving
-  const BASE_IMAGE_URL = "http://localhost:3000/profile/";
-
-  // Helper function to format profile URLs cleanly
+  // ============================================================
+  // HELPER FUNCTION: Resolve Profile Image URL
+  // Handles Cloudinary URLs, legacy paths, and avatar fallbacks
+  // ============================================================
   const getProfileImageUrl = (candidate) => {
     if (!candidate?.profile) {
       return `https://ui-avatars.com/api/?name=${encodeURIComponent(
         candidate?.name || "User"
       )}&background=7c3aed&color=fff`;
     }
+
+    // If candidate.profile is already a full Cloudinary or web URL
+    if (
+      candidate.profile.startsWith("http://") ||
+      candidate.profile.startsWith("https://")
+    ) {
+      return candidate.profile;
+    }
+
+    // Fallback for legacy relative/local file paths
     const fileName = candidate.profile.replace(/\\/g, "/").split("/").pop();
-    return `${BASE_IMAGE_URL}${fileName}`;
+    return `http://localhost:3000/profile/${fileName}`;
   };
 
   // ============================================================
@@ -53,7 +62,6 @@ const CandidateManager = () => {
   const handleCreatePosition = async (e) => {
     e.preventDefault();
 
-    // Validation check
     const invalidCandidate = candidates.some(
       (c) => !c.name.trim() || !c.profile
     );
@@ -72,7 +80,6 @@ const CandidateManager = () => {
       const candidateNames = candidates.map((c) => ({ name: c.name.trim() }));
       formData.append("candidates", JSON.stringify(candidateNames));
 
-      // Append image files in order matching the candidates array
       candidates.forEach((cand) => {
         formData.append("profiles", cand.profile);
       });
@@ -83,13 +90,14 @@ const CandidateManager = () => {
 
       setPosition("");
       setCandidates([{ name: "", profile: null }]);
-      await fetchPositions();
 
+      // Reset form controls
+      if (e.target) e.target.reset();
+
+      await fetchPositions();
       toast.success("Position created successfully");
     } catch (err) {
-      toast.error(
-        err.response?.data?.message || "Error creating position"
-      );
+      toast.error(err.response?.data?.message || "Error creating position");
     } finally {
       setLoading(false);
     }
@@ -125,16 +133,13 @@ const CandidateManager = () => {
       setNewCandidateName("");
       setNewCandidateProfile(null);
 
-      // Reset file input element manually
       const fileInput = document.getElementById("single-candidate-file");
       if (fileInput) fileInput.value = "";
 
       await fetchPositions();
       toast.success("Candidate added successfully");
     } catch (err) {
-      toast.error(
-        err.response?.data?.message || "Error adding candidate"
-      );
+      toast.error(err.response?.data?.message || "Error adding candidate");
     } finally {
       setLoading(false);
     }
@@ -149,12 +154,12 @@ const CandidateManager = () => {
       await fetchPositions();
       toast.success("Candidate removed successfully");
     } catch (err) {
-      toast.error("Error deleting candidate");
+      toast.error(err.response?.data?.message || "Error deleting candidate");
     }
   };
 
   // ============================================================
-  // FORM FIELD HANDLERS FOR POSITION CREATION
+  // FORM FIELD HANDLERS
   // ============================================================
   const handleCandidateNameChange = (index, value) => {
     const updated = [...candidates];
@@ -451,20 +456,17 @@ const CandidateManager = () => {
                       pos.candidates.map((candidate) => (
                         <div key={candidate._id} className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 bg-white p-3 shadow-sm">
                           <div className="flex items-center gap-3">
-                           <img
-  src={
-    candidate.profile
-      ? `${BASE_IMAGE_URL}${candidate.profile.replace(/\\/g, "/").split("/").pop()}`
-      : `https://ui-avatars.com/api/?name=${encodeURIComponent(candidate.name)}&background=7c3aed&color=fff`
-  }
-  alt={candidate.name}
-  className="h-10 w-10 rounded-full object-cover border border-slate-200"
-  onError={(e) => {
-    console.error("Failed image URL:", e.target.src);
-    e.target.onerror = null;
-    e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(candidate.name)}&background=7c3aed&color=fff`;
-  }}
-/>
+                            <img
+                              src={getProfileImageUrl(candidate)}
+                              alt={candidate.name}
+                              className="h-10 w-10 rounded-full object-cover border border-slate-200"
+                              onError={(e) => {
+                                e.target.onerror = null;
+                                e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                                  candidate?.name || "User"
+                                )}&background=7c3aed&color=fff`;
+                              }}
+                            />
                             <span className="truncate text-sm font-semibold text-slate-700">
                               {candidate.name}
                             </span>
