@@ -39,6 +39,13 @@ const AdminDashboard = () => {
   }, [students, studentClassSearch]);
 
   // =========================================================
+  // GET CANDIDATE PROFILE IMAGE
+  // =========================================================
+  const getCandidateProfileImage = (candidate) => {
+    return candidate?.profile || "";
+  };
+
+  // =========================================================
   // FETCH DATA
   // =========================================================
   const fetchData = async (showRefresh = false) => {
@@ -236,7 +243,6 @@ const AdminDashboard = () => {
     );
   }, [positions, votes]);
 
-  // Pie chart colors
   const PIE_COLORS = [
     "#7c3aed",
     "#4f46e5",
@@ -1068,6 +1074,9 @@ const AdminDashboard = () => {
                             winnerData?.winner?._id ===
                             candidate._id;
 
+                          const profileImage =
+                            getCandidateProfileImage(candidate);
+
                           return (
 
                             <div
@@ -1083,16 +1092,50 @@ const AdminDashboard = () => {
 
                                 <div className="flex min-w-0 items-center gap-3">
 
+                                  {/* =================================================
+                                      CANDIDATE PROFILE IMAGE
+                                  ================================================== */}
                                   <div
-                                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl font-bold ${
+                                    className={`h-12 w-12 shrink-0 overflow-hidden rounded-full border-2 ${
                                       isWinner
-                                        ? "bg-emerald-100 text-emerald-600"
-                                        : "bg-slate-100 text-slate-500"
-                                    }`}
+                                        ? "border-emerald-400"
+                                        : "border-slate-200"
+                                    } bg-slate-100`}
                                   >
-                                    {candidate.name
-                                      ?.charAt(0)
-                                      ?.toUpperCase()}
+
+                                    {profileImage ? (
+
+                                      <img
+                                        src={profileImage}
+                                        alt={`${candidate.name} profile`}
+                                        className="h-full w-full object-cover"
+                                        onError={(e) => {
+                                          e.currentTarget.style.display =
+                                            "none";
+                                          e.currentTarget.nextElementSibling.style.display =
+                                            "flex";
+                                        }}
+                                      />
+
+                                    ) : null}
+
+                                    {/* Fallback */}
+                                    <div
+                                      className={`${
+                                        profileImage
+                                          ? "hidden"
+                                          : "flex"
+                                      } h-full w-full items-center justify-center font-bold ${
+                                        isWinner
+                                          ? "bg-emerald-100 text-emerald-600"
+                                          : "bg-slate-100 text-slate-500"
+                                      }`}
+                                    >
+                                      {candidate.name
+                                        ?.charAt(0)
+                                        ?.toUpperCase()}
+                                    </div>
+
                                   </div>
 
                                   <div className="min-w-0">
@@ -1212,7 +1255,7 @@ const AdminDashboard = () => {
                               <path
                                 strokeLinecap="round"
                                 strokeLinejoin="round"
-                                d="M12 3l2.5 5.25L20.25 9l-4.125 4.125L17.25 19.5 12 16.75 6.75 19.5l1.125-6.375L3.75 9l5.75-.75L12 3z"
+                                d="M12 3l2.5 5.25L20.25 9l-4.125 4.125L12 16.75 6.75 19.5l1.125-6.375L3.75 9l5.75-.75L12 3z"
                               />
                             </svg>
 
@@ -1257,7 +1300,6 @@ const AdminDashboard = () => {
         ====================================================== */}
         <div className="mb-6 mt-6 overflow-hidden rounded-3xl border-2 border-violet-200 bg-white shadow-lg shadow-violet-100/60">
 
-          {/* Highlighted Section Header */}
           <div className="border-b border-violet-200 bg-gradient-to-r from-violet-50 via-purple-50 to-indigo-50 p-5 sm:p-6">
 
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -1313,7 +1355,6 @@ const AdminDashboard = () => {
 
               <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center lg:w-auto">
 
-                {/* Class Search */}
                 <div className="relative w-full sm:w-72">
 
                   <svg
@@ -1343,7 +1384,6 @@ const AdminDashboard = () => {
 
                 </div>
 
-                {/* Student Count */}
                 <span className="self-start rounded-full bg-violet-600 px-4 py-2 text-xs font-bold text-white shadow-sm sm:self-auto">
                   {filteredStudents.length} Students
                 </span>
@@ -1352,7 +1392,6 @@ const AdminDashboard = () => {
 
             </div>
 
-            {/* Search Information */}
             {studentClassSearch.trim() && (
               <div className="mt-4 flex items-center gap-2 rounded-xl border border-violet-100 bg-white/80 px-4 py-3 text-xs text-violet-700">
 
@@ -1496,7 +1535,7 @@ const AdminDashboard = () => {
 
                         <p className="mt-1 text-sm text-slate-500">
                           No students belong to class "
-                          {studentClassSearch.trim()}".
+                          {studentClassSearch.trim()}". 
                         </p>
 
                       </td>
@@ -1512,7 +1551,6 @@ const AdminDashboard = () => {
                         className="transition hover:bg-violet-50/50"
                       >
 
-                        {/* Student Username */}
                         <td className="px-6 py-4">
 
                           <div className="flex items-center gap-3">
@@ -1541,7 +1579,6 @@ const AdminDashboard = () => {
 
                         </td>
 
-                        {/* Father Name */}
                         <td className="px-6 py-4">
 
                           <p className="font-medium text-slate-700">
@@ -1550,7 +1587,6 @@ const AdminDashboard = () => {
 
                         </td>
 
-                        {/* Class */}
                         <td className="px-6 py-4">
 
                           <span className="inline-flex rounded-lg bg-violet-100 px-3 py-1.5 text-sm font-bold text-violet-700">
@@ -1559,7 +1595,6 @@ const AdminDashboard = () => {
 
                         </td>
 
-                        {/* Section */}
                         <td className="px-6 py-4">
 
                           <span className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600">
@@ -1568,7 +1603,6 @@ const AdminDashboard = () => {
 
                         </td>
 
-                        {/* Vote Number */}
                         <td className="px-6 py-4">
 
                           <span className="rounded-lg bg-violet-50 px-3 py-1.5 text-sm font-bold text-violet-600">
@@ -1577,7 +1611,6 @@ const AdminDashboard = () => {
 
                         </td>
 
-                        {/* Action */}
                         <td className="px-6 py-4 text-right">
 
                           <button
@@ -1646,3 +1679,4 @@ const AdminDashboard = () => {
 };
 
 export default AdminDashboard;
+

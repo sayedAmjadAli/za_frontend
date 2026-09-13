@@ -13,6 +13,8 @@ const VoteForm = () => {
   const [fetchingStudent, setFetchingStudent] = useState(false);
   const [loadingPositions, setLoadingPositions] = useState(true);
 
+
+
   // Fetch all positions and candidates
   const fetchPositions = async () => {
     try {
@@ -43,7 +45,6 @@ const VoteForm = () => {
     try {
       setFetchingStudent(true);
 
-      // POST request sent to student controller endpoint
       const response = await api.post("/student/login", {
         username: username.trim(),
         password: password.trim(),
@@ -51,11 +52,8 @@ const VoteForm = () => {
 
       if (response.data?.student) {
         setStudent(response.data.student);
-
-        // Reset previous selections when logged in as a new student
         setSelectedCandidates({});
         setVotedPositions([]);
-
         toast.success("Student logged in successfully!");
       } else {
         setStudent(null);
@@ -108,7 +106,6 @@ const VoteForm = () => {
       toast.success(`Vote successfully submitted for ${position}!`);
       setVotedPositions((prev) => [...prev, position]);
 
-      // Remove selection after successful vote
       setSelectedCandidates((prev) => {
         const updated = { ...prev };
         delete updated[position];
@@ -135,9 +132,7 @@ const VoteForm = () => {
   return (
     <div className="min-h-screen bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-6xl">
-        {/* =========================================================
-            HEADER
-        ========================================================= */}
+        {/* HEADER */}
         <div className="mb-6 overflow-hidden rounded-3xl bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700 p-6 text-white shadow-xl shadow-purple-200/50 sm:p-8">
           <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
             <div className="flex items-start gap-4">
@@ -203,9 +198,7 @@ const VoteForm = () => {
           </div>
         </div>
 
-        {/* =========================================================
-            STUDENT LOGIN FORM
-        ========================================================= */}
+        {/* STUDENT LOGIN FORM */}
         {!student ? (
           <div className="mb-6 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
             <div className="mb-5 flex items-center gap-3">
@@ -236,7 +229,6 @@ const VoteForm = () => {
 
             <form onSubmit={handleStudentLogin} className="space-y-4">
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                {/* Username Field */}
                 <div>
                   <label className="mb-1 block text-xs font-semibold text-slate-600">
                     Username
@@ -251,7 +243,6 @@ const VoteForm = () => {
                   />
                 </div>
 
-                {/* Password Field */}
                 <div>
                   <label className="mb-1 block text-xs font-semibold text-slate-600">
                     Password
@@ -319,9 +310,7 @@ const VoteForm = () => {
             </form>
           </div>
         ) : (
-          /* =========================================================
-              STUDENT INFORMATION (SHOWS AFTER SUCCESSFUL LOGIN)
-          ========================================================= */
+          /* STUDENT INFORMATION */
           <div className="mb-6 overflow-hidden rounded-3xl border border-emerald-100 bg-white shadow-sm">
             <div className="flex items-center justify-between border-b border-slate-100 bg-emerald-50/70 px-5 py-4 sm:px-6">
               <div className="flex items-center gap-4">
@@ -404,9 +393,7 @@ const VoteForm = () => {
           </div>
         )}
 
-        {/* =========================================================
-            LOADING POSITIONS
-        ========================================================= */}
+        {/* LOADING POSITIONS */}
         {student && loadingPositions && (
           <div className="rounded-3xl border border-slate-200 bg-white p-10 text-center shadow-sm">
             <svg
@@ -435,9 +422,7 @@ const VoteForm = () => {
           </div>
         )}
 
-        {/* =========================================================
-            POSITIONS
-        ========================================================= */}
+        {/* POSITIONS & CANDIDATE CARDS */}
         {student && !loadingPositions && positions.length > 0 && (
           <div className="space-y-5">
             <div className="flex items-end justify-between">
@@ -523,23 +508,25 @@ const VoteForm = () => {
                     )}
                   </div>
 
-                  {/* Candidates */}
+                  {/* Candidates Grid */}
                   <div className="p-5 sm:p-6">
                     {pos.candidates?.length > 0 ? (
-                      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         {pos.candidates.map((candidate) => {
                           const isSelected =
                             selectedCandidate === candidate._id;
+                          const rawImg = candidate.profile || "";
+                          const imageUrl = rawImg;
 
                           return (
                             <label
                               key={candidate._id}
-                              className={`group relative flex cursor-pointer items-center gap-4 rounded-2xl border p-4 transition duration-200 ${
+                              className={`group relative flex cursor-pointer flex-col justify-between overflow-hidden rounded-2xl border p-5 transition-all duration-200 ${
                                 isVoted
                                   ? "cursor-not-allowed border-slate-100 bg-slate-50 opacity-70"
                                   : isSelected
-                                  ? "border-violet-500 bg-violet-50 ring-4 ring-violet-500/10"
-                                  : "border-slate-200 bg-white hover:border-violet-300 hover:bg-violet-50/40"
+                                  ? "border-violet-500 bg-violet-50/50 shadow-md ring-4 ring-violet-500/10"
+                                  : "border-slate-200 bg-white hover:border-violet-300 hover:bg-violet-50/30 hover:shadow-md"
                               }`}
                             >
                               <input
@@ -557,58 +544,94 @@ const VoteForm = () => {
                                 className="sr-only"
                               />
 
-                              <div
-                                className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition ${
-                                  isSelected
-                                    ? "bg-violet-600 text-white"
-                                    : "bg-slate-100 text-slate-400 group-hover:bg-violet-100 group-hover:text-violet-500"
-                                }`}
-                              >
-                                <span className="text-sm font-bold">
-                                  {candidate.name?.charAt(0)?.toUpperCase()}
-                                </span>
+                              {/* Selection Indicator Badge */}
+                              <div className="absolute top-3 right-3 z-10">
+                                <div
+                                  className={`flex h-6 w-6 items-center justify-center rounded-full border-2 transition ${
+                                    isSelected
+                                      ? "border-violet-600 bg-violet-600 text-white"
+                                      : "border-slate-300 bg-white/80 group-hover:border-violet-400"
+                                  }`}
+                                >
+                                  {isSelected && (
+                                    <svg
+                                      xmlns="http://www.w3.org/2000/svg"
+                                      className="h-3.5 w-3.5 text-white"
+                                      fill="none"
+                                      viewBox="0 0 24 24"
+                                      stroke="currentColor"
+                                      strokeWidth="3"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        d="M5 13l4 4L19 7"
+                                      />
+                                    </svg>
+                                  )}
+                                </div>
                               </div>
 
-                              <div className="min-w-0 flex-1">
-                                <p
-                                  className={`truncate text-sm font-semibold ${
+                              {/* Candidate Image & Profile Info */}
+                              <div className="flex flex-col items-center text-center">
+                                <div className="relative mb-3 h-24 w-24 overflow-hidden rounded-2xl border-2 border-slate-100 shadow-sm transition group-hover:scale-105 group-hover:border-violet-300">
+                                  {imageUrl ? (
+                                    <img
+                                      src={imageUrl}
+                                      alt={candidate.name}
+                                      className="h-full w-full object-cover"
+                                      onError={(e) => {
+                                        e.target.style.display = "none";
+                                        e.target.nextSibling.style.display = "flex";
+                                      }}
+                                    />
+                                  ) : null}
+
+                                  {/* Fallback Initial Avatar */}
+                                  <div
+                                    className={`flex h-full w-full items-center justify-center font-bold text-2xl uppercase ${
+                                      isSelected
+                                        ? "bg-violet-600 text-white"
+                                        : "bg-slate-100 text-slate-500 group-hover:bg-violet-100 group-hover:text-violet-600"
+                                    }`}
+                                    style={{
+                                      display: imageUrl ? "none" : "flex",
+                                    }}
+                                  >
+                                    {candidate.name?.charAt(0)?.toUpperCase() || "C"}
+                                  </div>
+                                </div>
+
+                                <h4
+                                  className={`text-base font-bold transition-colors ${
                                     isSelected
-                                      ? "text-violet-700"
-                                      : "text-slate-800"
+                                      ? "text-violet-900"
+                                      : "text-slate-800 group-hover:text-violet-700"
                                   }`}
                                 >
                                   {candidate.name}
-                                </p>
-                                <p className="mt-0.5 text-xs text-slate-400">
-                                  {isSelected
-                                    ? "Selected candidate"
-                                    : "Click to select"}
-                                </p>
+                                </h4>
+
+                                {(candidate.symbol || candidate.manifesto) && (
+                                  <p className="mt-1 line-clamp-2 text-xs text-slate-500">
+                                    {candidate.symbol || candidate.manifesto}
+                                  </p>
+                                )}
                               </div>
 
-                              <div
-                                className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition ${
-                                  isSelected
-                                    ? "border-violet-600 bg-violet-600"
-                                    : "border-slate-300"
-                                }`}
-                              >
-                                {isSelected && (
-                                  <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    className="h-3 w-3 text-white"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    stroke="currentColor"
-                                    strokeWidth="3"
-                                  >
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      d="M5 13l4 4L19 7"
-                                    />
-                                  </svg>
-                                )}
+                              {/* Selection Status Label */}
+                              <div className="mt-4 pt-3 border-t border-slate-100 text-center">
+                                <span
+                                  className={`text-xs font-semibold ${
+                                    isSelected
+                                      ? "text-violet-600"
+                                      : "text-slate-400 group-hover:text-violet-500"
+                                  }`}
+                                >
+                                  {isSelected
+                                    ? "Candidate Selected"
+                                    : "Click to select"}
+                                </span>
                               </div>
                             </label>
                           );
@@ -682,9 +705,7 @@ const VoteForm = () => {
           </div>
         )}
 
-        {/* =========================================================
-            NO POSITIONS
-        ========================================================= */}
+        {/* NO POSITIONS */}
         {student && !loadingPositions && positions.length === 0 && (
           <div className="rounded-3xl border border-slate-200 bg-white p-10 text-center shadow-sm">
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
@@ -713,9 +734,7 @@ const VoteForm = () => {
           </div>
         )}
 
-        {/* =========================================================
-            COMPLETED MESSAGE
-        ========================================================= */}
+        {/* COMPLETED MESSAGE */}
         {student &&
           !loadingPositions &&
           positions.length > 0 &&
