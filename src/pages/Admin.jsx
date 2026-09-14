@@ -18,6 +18,14 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [studentClassSearch, setStudentClassSearch] = useState("");
+  const [showResults, setShowResults] = useState(false);
+  const [resultPassword, setResultPassword] = useState("");
+  const [resultCountdown, setResultCountdown] = useState(0);
+  const [unlockingResults, setUnlockingResults] = useState(false);
+
+  // Change this password to your private election-results password.
+  // IMPORTANT: for real security, validate the password on the backend too.
+  const RESULTS_SECRET_PASSWORD = "Election@2026";
 
   // =========================================================
   // FILTER STUDENTS BY EXACT CLASS
@@ -37,6 +45,57 @@ const AdminDashboard = () => {
       return studentClass === search;
     });
   }, [students, studentClassSearch]);
+
+  // =========================================================
+  // ELECTION RESULTS UNLOCK
+  // =========================================================
+  const unlockResults = () => {
+    if (resultPassword !== RESULTS_SECRET_PASSWORD) {
+      toast.error("Incorrect results password.");
+      return;
+    }
+
+    setUnlockingResults(true);
+    setResultCountdown(10);
+
+    let seconds = 10;
+    const timer = setInterval(() => {
+      seconds -= 1;
+      setResultCountdown(seconds);
+
+      if (seconds <= 0) {
+        clearInterval(timer);
+        setUnlockingResults(false);
+        setShowResults(true);
+        setResultPassword("");
+        toast.success("Election results are now available.");
+      }
+    }, 1000);
+  };
+
+  const lockResults = () => {
+    setShowResults(false);
+    setUnlockingResults(false);
+    setResultCountdown(0);
+    setResultPassword("");
+  };
+
+  // Display vote number in the format VIII-A-004.
+  // Existing numeric vote numbers (1, 2, 3...) are converted using
+  // the student's class and section without changing the database value.
+  const formatVoteNumber = (student) => {
+    const className = String(student?.class || "").trim().toUpperCase();
+    const section = String(student?.section || "").trim().toUpperCase();
+    const rawVoteNumber = String(student?.voteNumber ?? "").trim();
+
+    const numericPart = rawVoteNumber.match(/(\d+)$/)?.[1];
+
+    if (!className || !section || !numericPart) {
+      return rawVoteNumber;
+    }
+
+    return `${className}-${section}-${numericPart.padStart(3, "0")}`;
+  };
 
   // =========================================================
   // GET CANDIDATE PROFILE IMAGE
@@ -727,18 +786,102 @@ const AdminDashboard = () => {
                   {totalVotes} Total Votes
                 </span>
 
-                <span className="rounded-full bg-emerald-100 px-3 py-1.5 text-xs font-bold text-emerald-700">
-                  Live Results
-                </span>
+                {showResults ? (
+                  <button
+                    type="button"
+                    onClick={lockResults}
+                    className="rounded-full bg-rose-100 px-3 py-1.5 text-xs font-bold text-rose-700 transition hover:bg-rose-200"
+                  >
+                    Lock Results
+                  </button>
+                ) : (
+                  <span className="rounded-full bg-amber-100 px-3 py-1.5 text-xs font-bold text-amber-700">
+                    Results Locked
+                  </span>
+                )}
 
               </div>
 
             </div>
           </div>
 
-          {chartData.length === 0 || pieTotalVotes === 0 ? (
+          {!showResults ? (
 
             <div className="flex min-h-[360px] items-center justify-center p-6">
+              <div className="w-full max-w-md rounded-3xl border border-violet-200 bg-gradient-to-br from-violet-50 via-white to-indigo-50 p-6 text-center shadow-sm sm:p-8">
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-violet-100 text-violet-600">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-8 w-8"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M12 15.75a3 3 0 100-6 3 3 0 000 6z"
+                    />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M5.25 10.5V8.25a6.75 6.75 0 0113.5 0v2.25M6.75 10.5h10.5A1.5 1.5 0 0118.75 12v7.5A1.5 1.5 0 0117.25 21H6.75a1.5 1.5 0 01-1.5-1.5V12a1.5 1.5 0 011.5-1.5z"
+                    />
+                  </svg>
+                </div>
+
+                <h3 className="mt-4 text-lg font-extrabold text-slate-900">
+                  Election Results Locked
+                </h3>
+
+                <p className="mt-2 text-sm leading-6 text-slate-500">
+                  Enter the secret password to reveal the election results.
+                  After the correct password is entered, results will appear
+                  after a 10-second countdown.
+                </p>
+
+                <div className="mt-5">
+                  <input
+                    type="password"
+                    value={resultPassword}
+                    onChange={(e) => setResultPassword(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !unlockingResults) {
+                        unlockResults();
+                      }
+                    }}
+                    disabled={unlockingResults}
+                    placeholder="Enter secret password"
+                    className="w-full rounded-xl border-2 border-violet-100 bg-white px-4 py-3 text-center text-sm font-semibold text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-violet-400 focus:ring-4 focus:ring-violet-100 disabled:cursor-not-allowed disabled:bg-slate-50"
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={unlockResults}
+                  disabled={unlockingResults || !resultPassword}
+                  className="mt-3 w-full rounded-xl bg-violet-600 px-5 py-3 text-sm font-bold text-white shadow-md transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {unlockingResults
+                    ? `Preparing Results... ${resultCountdown}s`
+                    : "Reveal Election Results"}
+                </button>
+
+                {unlockingResults && (
+                  <div className="mt-5">
+                    <div className="h-2 overflow-hidden rounded-full bg-violet-100">
+                      <div
+                        className="h-full rounded-full bg-violet-600 transition-all duration-1000"
+                        style={{ width: `${((10 - resultCountdown) / 10) * 100}%` }}
+                      />
+                    </div>
+                    <p className="mt-2 text-xs font-semibold text-violet-600">
+                      Results will be revealed in {resultCountdown} seconds...
+                    </p>
+                  </div>
+                )}
+              </div>
 
               <div className="rounded-2xl bg-slate-50 px-8 py-12 text-center">
 
@@ -777,6 +920,17 @@ const AdminDashboard = () => {
 
               </div>
 
+            </div>
+
+          ) : chartData.length === 0 || pieTotalVotes === 0 ? (
+
+            <div className="flex min-h-[360px] items-center justify-center p-6">
+              <div className="rounded-2xl bg-slate-50 px-8 py-12 text-center">
+                <h3 className="font-bold text-slate-800">No voting results yet</h3>
+                <p className="mt-1 text-sm text-slate-500">
+                  Candidate vote results are not available yet.
+                </p>
+              </div>
             </div>
 
           ) : (
@@ -957,7 +1111,40 @@ const AdminDashboard = () => {
 
           </div>
 
-          {positions.length === 0 ? (
+          {!showResults ? (
+
+            <div className="rounded-2xl border border-violet-100 bg-violet-50/60 p-10 text-center">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-100 text-violet-600">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-7 w-7"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M12 15.75a3 3 0 100-6 3 3 0 000 6z"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M5.25 10.5V8.25a6.75 6.75 0 0113.5 0v2.25"
+                  />
+                </svg>
+              </div>
+              <h3 className="mt-4 font-bold text-slate-800">
+                Detailed Results Locked
+              </h3>
+              <p className="mt-1 text-sm text-slate-500">
+                Unlock the Election Results Overview above to view candidates,
+                vote counts and winners.
+              </p>
+            </div>
+
+          ) : positions.length === 0 ? (
 
             <div className="rounded-2xl bg-slate-50 p-10 text-center">
 
@@ -1347,6 +1534,7 @@ const AdminDashboard = () => {
 
                   <p className="mt-1 text-xs text-slate-500">
                     Search and manage students registered in the election.
+                    Vote numbers are displayed as Class-Section-###.
                   </p>
 
                 </div>
@@ -1465,7 +1653,7 @@ const AdminDashboard = () => {
 
             <div className="overflow-x-auto">
 
-              <table className="w-full min-w-[900px]">
+              <table className="w-full min-w-[1050px]">
 
                 <thead>
 
@@ -1491,6 +1679,10 @@ const AdminDashboard = () => {
                       Vote Number
                     </th>
 
+                    <th className="px-6 py-4 font-bold">
+                      Password
+                    </th>
+
                     <th className="px-6 py-4 text-right font-bold">
                       Action
                     </th>
@@ -1506,7 +1698,7 @@ const AdminDashboard = () => {
                     <tr>
 
                       <td
-                        colSpan="6"
+                        colSpan="7"
                         className="px-6 py-12 text-center"
                       >
 
@@ -1606,9 +1798,15 @@ const AdminDashboard = () => {
                         <td className="px-6 py-4">
 
                           <span className="rounded-lg bg-violet-50 px-3 py-1.5 text-sm font-bold text-violet-600">
-                            {student.voteNumber}
+                            {formatVoteNumber(student)}
                           </span>
 
+                        </td>
+
+                        <td className="px-6 py-4">
+                          <span className="inline-flex min-w-[110px] rounded-lg bg-amber-50 px-3 py-1.5 text-sm font-bold text-amber-700">
+                            {student.password || "—"}
+                          </span>
                         </td>
 
                         <td className="px-6 py-4 text-right">
