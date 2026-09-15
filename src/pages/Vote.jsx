@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import api from "../api";
 import logo from "../assets/logo.jpeg";
+import electionLogo from "../assets/election.jpeg"; // Import the election logo
 
 const VoteForm = () => {
   const [username, setUsername] = useState("");
@@ -135,92 +136,109 @@ const VoteForm = () => {
       <div className="mx-auto flex min-h-[calc(100vh-3rem)] max-w-6xl items-stretch justify-center">
         <div className="grid w-full overflow-hidden rounded-3xl bg-white shadow-2xl shadow-slate-300/40 lg:grid-cols-5">
           {/* LEFT SIDEBAR / ELECTION BRANDING */}
-          <aside className="relative overflow-hidden bg-gradient-to-br from-violet-700 via-purple-700 to-indigo-800 p-8 text-white sm:p-10 lg:col-span-2 lg:p-12">
-            <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-white/10" />
-            <div className="absolute -bottom-32 -left-24 h-80 w-80 rounded-full bg-white/10" />
-            <div className="absolute right-0 top-1/2 h-52 w-52 -translate-y-1/2 rounded-full bg-white/5" />
+          {/* LEFT SIDEBAR / ELECTION BRANDING */}
+<aside className="relative overflow-hidden bg-gradient-to-br from-violet-700 via-purple-700 to-indigo-800 p-8 text-white sm:p-10 lg:col-span-2 lg:p-12">
+  <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-white/10" />
+  <div className="absolute -bottom-32 -left-24 h-80 w-80 rounded-full bg-white/10" />
+  <div className="absolute right-0 top-1/2 h-52 w-52 -translate-y-1/2 rounded-full bg-white/5" />
 
-            <div className="relative z-10 flex h-full flex-col justify-between">
-              <div>
-                <div className="mb-7 flex w-full items-center justify-center rounded-2xl bg-white px-5 py-4 shadow-xl">
-                  <img
-                    src={logo}
-                    alt="SZABIST ZAB-ed LRK"
-                    className="h-20 w-full object-contain sm:h-24"
-                  />
-                </div>
+  <div className="relative z-10 flex h-full flex-col justify-between">
+    <div>
+      {/* BOTH LOGOS CONTAINER */}
+      <div className="mb-7 flex w-full items-center justify-center gap-3 rounded-2xl bg-white p-4 shadow-xl sm:gap-4">
+        {/* Primary School Logo */}
+        <div className="flex h-16 flex-1 items-center justify-center sm:h-20">
+          <img
+            src={logo}
+            alt="SZABIST ZAB-ed LRK"
+            className="max-h-full max-w-full object-contain"
+          />
+        </div>
 
-                <div className="text-center lg:text-left">
-                  <p className="whitespace-nowrap text-base font-extrabold tracking-wide text-white sm:text-lg">
-                    SZABIST ZAB-ed LRK
-                  </p>
-                  <div className="mx-auto mt-2 h-1 w-16 rounded-full bg-purple-300 lg:mx-0" />
-                </div>
+        {/* Divider line between logos */}
+        <div className="h-12 w-px shrink-0 bg-purple-200" />
 
-                <div className="mb-5 mt-8 inline-flex items-center rounded-full border border-white/20 bg-white/10 px-4 py-2 backdrop-blur-md">
-                  <span className="mr-2 h-2 w-2 rounded-full bg-emerald-300 shadow-lg shadow-emerald-300/50" />
-                  <span className="text-xs font-bold uppercase tracking-[0.18em] text-purple-100">
-                    Official School Election
-                  </span>
-                </div>
+        {/* Election Council Logo */}
+        <div className="flex h-16 flex-1 items-center justify-center sm:h-20">
+          <img
+            src= {electionLogo}
+            alt="Students Council Election"
+            className="max-h-full max-w-full object-contain"
+          />
+        </div>
+      </div>
 
-                <h1 className="text-4xl font-extrabold leading-[1.05] tracking-tight sm:text-5xl">
-                  Students
-                  <br />
-                  <span className="text-purple-200">Council</span>
-                  <br />
-                  Election
-                </h1>
+      <div className="text-center lg:text-left">
+        <p className="whitespace-nowrap text-base font-extrabold tracking-wide text-white sm:text-lg">
+          SZABIST ZAB-ed LRK
+        </p>
+        <div className="mx-auto mt-2 h-1 w-16 rounded-full bg-purple-300 lg:mx-0" />
+      </div>
 
-                <div className="mt-7 inline-flex items-center rounded-xl bg-white px-5 py-3 shadow-xl">
-                  <span className="text-xl font-extrabold tracking-wide text-violet-700">
-                    2026–27
-                  </span>
-                </div>
+      <div className="mb-5 mt-8 inline-flex items-center rounded-full border border-white/20 bg-white/10 px-4 py-2 backdrop-blur-md">
+        <span className="mr-2 h-2 w-2 rounded-full bg-emerald-300 shadow-lg shadow-emerald-300/50" />
+        <span className="text-xs font-bold uppercase tracking-[0.18em] text-purple-100">
+          Official School Election
+        </span>
+      </div>
 
-                <p className="mt-6 max-w-sm text-sm leading-7 text-purple-100">
-                  Empowering students to participate, lead, and make their
-                  voices heard through a fair, secure, and transparent
-                  Students Council Election.
-                </p>
-              </div>
+      <h1 className="text-4xl font-extrabold leading-[1.05] tracking-tight sm:text-5xl">
+        Students
+        <br />
+        <span className="text-purple-200">Council</span>
+        <br />
+        Election
+      </h1>
 
-              <div className="mt-12 rounded-2xl border border-white/10 bg-white/10 p-5 shadow-lg backdrop-blur-md">
-                <div className="flex items-start gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5 text-white"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth="1.8"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M9 12.75l2 2 4-4.5"
-                      />
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M12 3l7.5 4.5v5.25c0 4.5-3.25 7.5-7.5 8.25-4.25-.75-7.5-3.75-7.5-8.25V7.5L12 3z"
-                      />
-                    </svg>
-                  </div>
-                  <div>
-                    <h2 className="font-bold text-white">
-                      Fair &amp; Secure Election
-                    </h2>
-                    <p className="mt-1 text-xs leading-5 text-purple-100">
-                      Every student's vote matters. Please verify all student,
-                      candidate, and election details prior to submission.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </aside>
+      <div className="mt-7 inline-flex items-center rounded-xl bg-white px-5 py-3 shadow-xl">
+        <span className="text-xl font-extrabold tracking-wide text-violet-700">
+          2026–27
+        </span>
+      </div>
+
+      <p className="mt-6 max-w-sm text-sm leading-7 text-purple-100">
+        Empowering students to participate, lead, and make their
+        voices heard through a fair, secure, and transparent
+        Students Council Election.
+      </p>
+    </div>
+
+    <div className="mt-12 rounded-2xl border border-white/10 bg-white/10 p-5 shadow-lg backdrop-blur-md">
+      <div className="flex items-start gap-3">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-5 w-5 text-white"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth="1.8"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M9 12.75l2 2 4-4.5"
+            />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M12 3l7.5 4.5v5.25c0 4.5-3.25 7.5-7.5 8.25-4.25-.75-7.5-3.75-7.5-8.25V7.5L12 3z"
+            />
+          </svg>
+        </div>
+        <div>
+          <h2 className="font-bold text-white">
+            Fair &amp; Secure Election
+          </h2>
+          <p className="mt-1 text-xs leading-5 text-purple-100">
+            Every student's vote matters. Please verify all student,
+            candidate, and election details prior to submission.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</aside>
 
           {/* RIGHT CONTENT */}
           <main className="min-w-0 p-6 sm:p-10 lg:col-span-3 lg:p-12">

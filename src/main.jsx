@@ -9,7 +9,7 @@ import Student from "./pages/Student";
 import CandidateRegister from "./pages/Candidate";
 import Vote from "./pages/Vote";
 import Admin from "./pages/Admin";
-
+import Election from "./pages/Election";
 
 const router = createBrowserRouter([
   {
@@ -35,7 +35,11 @@ const router = createBrowserRouter([
 {
     path:"/results",
     element:<Admin/>  
-  }
+  },
+    {
+    path:"/election",
+    element:<Election/>  
+  },
 
 ]);
 

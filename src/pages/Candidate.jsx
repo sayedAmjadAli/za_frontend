@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import api from "../api";
+import electionLogo from "../assets/election.jpeg"; // Adjust the import path if your assets folder is located elsewhere
 
 const CandidateManager = () => {
   const [positions, setPositions] = useState([]);
@@ -200,22 +201,30 @@ const CandidateManager = () => {
           <div className="absolute right-1/4 top-1/2 h-40 w-40 -translate-y-1/2 rounded-full bg-white/5" />
 
           <div className="relative z-10 flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <div className="mb-4 inline-flex items-center rounded-full border border-white/20 bg-white/10 px-4 py-2 backdrop-blur-md">
-                <span className="mr-2 h-2 w-2 rounded-full bg-emerald-300 shadow-lg shadow-emerald-300/50" />
-                <span className="text-xs font-bold uppercase tracking-[0.15em] text-purple-100">
-                  Official Election Portal
-                </span>
+            <div className="flex items-center gap-5">
+              {/* ELECTION LOGO */}
+              <img
+                src={electionLogo}
+                alt="Election Logo"
+                className="h-16 w-16 shrink-0 rounded-2xl object-cover ring-4 ring-white/20 shadow-lg sm:h-20 sm:w-20"
+              />
+              <div>
+                <div className="mb-3 inline-flex items-center rounded-full border border-white/20 bg-white/10 px-4 py-1.5 backdrop-blur-md">
+                  <span className="mr-2 h-2 w-2 rounded-full bg-emerald-300 shadow-lg shadow-emerald-300/50" />
+                  <span className="text-xs font-bold uppercase tracking-[0.15em] text-purple-100">
+                    Official Election Portal
+                  </span>
+                </div>
+                <p className="whitespace-nowrap text-sm font-extrabold uppercase tracking-wider text-purple-200 sm:text-base">
+                  SZABIST ZAB-ed LRK
+                </p>
+                <h1 className="mt-1 text-3xl font-extrabold tracking-tight sm:text-4xl">
+                  Students Council Election
+                </h1>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-purple-100">
+                  Manage positions and candidates. Images are securely saved and served directly via Cloudinary.
+                </p>
               </div>
-              <p className="whitespace-nowrap text-sm font-extrabold uppercase tracking-wider text-purple-200 sm:text-base">
-                SZABIST ZAB-ed LRK
-              </p>
-              <h1 className="mt-2 text-3xl font-extrabold tracking-tight sm:text-4xl">
-                Students Council Election
-              </h1>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-purple-100">
-                Manage positions and candidates. Images are securely saved and served directly via Cloudinary.
-              </p>
             </div>
 
             <div className="relative shrink-0 rounded-2xl bg-white px-6 py-4 text-center shadow-xl">
@@ -429,7 +438,7 @@ const CandidateManager = () => {
           </form>
         </div>
 
-        {/* DISPLAY POSITIONS & CANDIDATES (CARDS SHOWCASING LARGE CLOUDINARY IMAGES) */}
+        {/* DISPLAY POSITIONS & CANDIDATES */}
         <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-lg shadow-slate-200/50 sm:p-8">
           <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-start gap-4">
