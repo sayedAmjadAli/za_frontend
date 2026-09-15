@@ -1,6 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import logo from "../assets/logo.jpeg";
+import electionLogo from "../assets/election.jpeg";
 
 const WelcomeScreen = () => {
   const navigate = useNavigate();
@@ -25,13 +26,30 @@ const WelcomeScreen = () => {
 
               {/* BRANDING */}
               <div>
-                {/* Horizontal Logo */}
-                <div className="mb-7 flex w-full items-center justify-center rounded-2xl bg-white px-5 py-4 shadow-xl">
-                  <img
-                    src={logo}
-                    alt="SZABIST ZAB-ed LRK"
-                    className="h-20 w-full object-contain sm:h-24"
-                  />
+                {/* Horizontal Logos */}
+                <div className="mb-7 flex w-full items-center justify-center gap-3 rounded-2xl bg-white px-4 py-4 shadow-xl sm:px-5">
+
+                  {/* Main Logo */}
+                  <div className="flex h-20 min-w-0 flex-1 items-center justify-center sm:h-24">
+                    <img
+                      src={logo}
+                      alt="SZABIST ZAB-ed LRK"
+                      className="h-full w-full object-contain"
+                    />
+                  </div>
+
+                  {/* Divider */}
+                  <div className="h-16 w-px shrink-0 bg-slate-200 sm:h-20" />
+
+                  {/* Election Logo */}
+                  <div className="flex h-20 min-w-0 flex-1 items-center justify-center sm:h-24">
+                    <img
+                      src={electionLogo}
+                      alt="Students Council Election"
+                      className="h-full w-full object-contain"
+                    />
+                  </div>
+
                 </div>
 
                 {/* Institute Name */}

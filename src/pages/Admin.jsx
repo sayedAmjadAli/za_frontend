@@ -2,6 +2,17 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
 import api from "../api";
+import logo from "../assets/logo.jpeg";
+import electionLogo from "../assets/election.jpeg";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 
 const AdminDashboard = () => {
   const [students, setStudents] = useState([]);
@@ -10,9 +21,7 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [studentClassSearch, setStudentClassSearch] = useState("");
-  // =========================================================
-  // FILTER STUDENTS BY EXACT CLASS
-  // =========================================================
+
   const filteredStudents = useMemo(() => {
     const search = studentClassSearch.trim().toLowerCase();
 
@@ -20,38 +29,10 @@ const AdminDashboard = () => {
       return students;
     }
 
-    return students.filter((student) => {
-      const studentClass = String(student.class || "")
-        .trim()
-        .toLowerCase();
-
-      return studentClass === search;
-    });
+    return students.filter((student) =>
+      String(student.class || "").toLowerCase().includes(search)
+    );
   }, [students, studentClassSearch]);
-
-  // Display vote number in the format VIII-A-004.
-  // Existing numeric vote numbers (1, 2, 3...) are converted using
-  // the student's class and section without changing the database value.
-  const formatVoteNumber = (student) => {
-    const className = String(student?.class || "").trim().toUpperCase();
-    const section = String(student?.section || "").trim().toUpperCase();
-    const rawVoteNumber = String(student?.voteNumber ?? "").trim();
-
-    const numericPart = rawVoteNumber.match(/(\d+)$/)?.[1];
-
-    if (!className || !section || !numericPart) {
-      return rawVoteNumber;
-    }
-
-    return `${className}-${section}-${numericPart.padStart(3, "0")}`;
-  };
-
-  // =========================================================
-  // GET CANDIDATE PROFILE IMAGE
-  // =========================================================
-  const getCandidateProfileImage = (candidate) => {
-    return candidate?.profile || "";
-  };
 
   // =========================================================
   // FETCH DATA
@@ -63,9 +44,11 @@ const AdminDashboard = () => {
       setLoading(true);
     }
 
+    // Fetch each API independently.
+    // If candidates or votes are empty/fail, students will still load.
+
     try {
       const studentsRes = await api.get("/student/getStudents");
-
       console.log("STUDENTS API RESPONSE:", studentsRes.data);
 
       setStudents(
@@ -78,17 +61,16 @@ const AdminDashboard = () => {
         "STUDENTS API ERROR:",
         error.response?.data || error.message
       );
-
       setStudents([]);
 
       toast.error(
-        error.response?.data?.message || "Unable to load students"
+        error.response?.data?.message ||
+          "Unable to load students"
       );
     }
 
     try {
       const positionsRes = await api.get("/candidate/Positions");
-
       console.log("POSITIONS API RESPONSE:", positionsRes.data);
 
       setPositions(
@@ -101,13 +83,11 @@ const AdminDashboard = () => {
         "POSITIONS API ERROR:",
         error.response?.data || error.message
       );
-
       setPositions([]);
     }
 
     try {
       const votesRes = await api.get("/vote/getVotes");
-
       console.log("VOTES API RESPONSE:", votesRes.data);
 
       setVotes(
@@ -120,7 +100,6 @@ const AdminDashboard = () => {
         "VOTES API ERROR:",
         error.response?.data || error.message
       );
-
       setVotes([]);
     }
 
@@ -154,7 +133,6 @@ const AdminDashboard = () => {
       fetchData();
     } catch (error) {
       console.error(error);
-
       toast.error(
         error.response?.data?.message || "Error deleting student"
       );
@@ -179,7 +157,6 @@ const AdminDashboard = () => {
       fetchData();
     } catch (error) {
       console.error(error);
-
       toast.error(
         error.response?.data?.message || "Error deleting candidate"
       );
@@ -192,9 +169,35 @@ const AdminDashboard = () => {
   const getVoteCount = (candidateId, position) => {
     return votes.filter(
       (v) =>
-        String(v.candidate) === String(candidateId) &&
+        v.candidate === candidateId &&
         v.position === position
     ).length;
+  };
+
+  // =========================================================
+  // FIND WINNER
+  // =========================================================
+  const getWinner = (candidates, position) => {
+    if (!candidates || candidates.length === 0) {
+      return null;
+    }
+
+    let winner = candidates[0];
+    let maxVotes = getVoteCount(winner._id, position);
+
+    candidates.forEach((candidate) => {
+      const count = getVoteCount(candidate._id, position);
+
+      if (count > maxVotes) {
+        winner = candidate;
+        maxVotes = count;
+      }
+    });
+
+    return {
+      winner,
+      maxVotes,
+    };
   };
 
   // =========================================================
@@ -209,8 +212,83 @@ const AdminDashboard = () => {
   }, [positions]);
 
   const totalPositions = positions.length;
+
   const totalStudents = students.length;
+
   const totalVotes = votes.length;
+
+  // =========================================================
+  // CHART DATA
+  // =========================================================
+  const chartData = useMemo(() => {
+    return positions
+      .flatMap((position) =>
+        (position.candidates || []).map((candidate) => ({
+          candidate: candidate.name,
+          position: position.position,
+          votes: getVoteCount(candidate._id, position.position),
+        }))
+      )
+      .sort((a, b) => b.votes - a.votes);
+  }, [positions, votes]);
+
+  // =========================================================
+  // EXPORT RESULTS
+  // =========================================================
+  const exportResults = () => {
+    if (positions.length === 0) {
+      toast.warning("No election results available to export.");
+      return;
+    }
+
+    let csv = "Position,Candidate,Votes,Winner\n";
+
+    positions.forEach((pos) => {
+      const winnerData = getWinner(
+        pos.candidates,
+        pos.position
+      );
+
+      pos.candidates.forEach((candidate) => {
+        const voteCount = getVoteCount(
+          candidate._id,
+          pos.position
+        );
+
+        const isWinner =
+          winnerData &&
+          winnerData.winner._id === candidate._id
+            ? "Yes"
+            : "No";
+
+        csv += `"${pos.position}","${candidate.name}",${voteCount},"${isWinner}"\n`;
+      });
+    });
+
+    const blob = new Blob([csv], {
+      type: "text/csv;charset=utf-8;",
+    });
+
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.setAttribute(
+      "download",
+      "election_results.csv"
+    );
+
+    document.body.appendChild(link);
+
+    link.click();
+
+    document.body.removeChild(link);
+
+    URL.revokeObjectURL(url);
+
+    toast.success("Election results exported successfully!");
+  };
 
   // =========================================================
   // LOADING SCREEN
@@ -261,13 +339,38 @@ const AdminDashboard = () => {
 
         {/* =====================================================
             HEADER
-        ====================================================== */}
+        ===================================================== */}
         <div className="mb-6 overflow-hidden rounded-3xl bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700 p-6 text-white shadow-xl shadow-purple-200/50 sm:p-8">
+
           <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
 
-            <div className="flex items-start gap-4">
+            <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
+
+              {/* BOTH LOGOS */}
+              <div className="flex w-fit items-center gap-2 rounded-2xl bg-white p-2 shadow-lg">
+                <div className="flex h-14 w-20 items-center justify-center rounded-xl sm:h-16 sm:w-24">
+                  <img
+                    src={logo}
+                    alt="SZABIST ZAB-ed LRK"
+                    className="max-h-full max-w-full object-contain"
+                  />
+                </div>
+
+                <div className="h-10 w-px bg-slate-200" />
+
+                <div className="flex h-14 w-20 items-center justify-center rounded-xl sm:h-16 sm:w-24">
+                  <img
+                    src={electionLogo}
+                    alt="Students Council Election"
+                    className="max-h-full max-w-full object-contain"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-start gap-4">
 
               <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/15 backdrop-blur-sm">
+
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   className="h-7 w-7"
@@ -294,6 +397,7 @@ const AdminDashboard = () => {
                     d="M4.5 19.5h15"
                   />
                 </svg>
+
               </div>
 
               <div>
@@ -311,8 +415,11 @@ const AdminDashboard = () => {
                 </p>
               </div>
 
+              </div>
+
             </div>
 
+            {/* Header Actions */}
             <div className="flex flex-col gap-3 sm:flex-row">
 
               <button
@@ -359,7 +466,40 @@ const AdminDashboard = () => {
                 {refreshing ? "Refreshing..." : "Refresh"}
               </button>
 
+              <button
+                type="button"
+                onClick={exportResults}
+                className="flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-violet-700 shadow-lg transition hover:-translate-y-0.5 hover:shadow-xl"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M12 3v12"
+                  />
 
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M7.5 10.5L12 15l4.5-4.5"
+                  />
+
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M4.5 21h15"
+                  />
+                </svg>
+
+                Export Results
+              </button>
 
             </div>
           </div>
@@ -367,11 +507,12 @@ const AdminDashboard = () => {
 
         {/* =====================================================
             STATISTICS
-        ====================================================== */}
+        ===================================================== */}
         <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
 
           {/* Students */}
           <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-md">
+
             <div className="flex items-center justify-between">
 
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-violet-100 text-violet-600">
@@ -410,10 +551,12 @@ const AdminDashboard = () => {
             <p className="mt-1 text-sm text-slate-500">
               Registered students
             </p>
+
           </div>
 
           {/* Candidates */}
           <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-md">
+
             <div className="flex items-center justify-between">
 
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-100 text-indigo-600">
@@ -442,6 +585,7 @@ const AdminDashboard = () => {
               <span className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-600">
                 Candidates
               </span>
+
             </div>
 
             <p className="mt-5 text-3xl font-bold text-slate-900">
@@ -451,10 +595,12 @@ const AdminDashboard = () => {
             <p className="mt-1 text-sm text-slate-500">
               Registered candidates
             </p>
+
           </div>
 
           {/* Positions */}
           <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-md">
+
             <div className="flex items-center justify-between">
 
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100 text-amber-600">
@@ -477,6 +623,7 @@ const AdminDashboard = () => {
               <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-600">
                 Positions
               </span>
+
             </div>
 
             <p className="mt-5 text-3xl font-bold text-slate-900">
@@ -486,10 +633,12 @@ const AdminDashboard = () => {
             <p className="mt-1 text-sm text-slate-500">
               Election positions
             </p>
+
           </div>
 
           {/* Votes */}
           <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-md">
+
             <div className="flex items-center justify-between">
 
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-600">
@@ -518,6 +667,7 @@ const AdminDashboard = () => {
               <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-600">
                 Votes
               </span>
+
             </div>
 
             <p className="mt-5 text-3xl font-bold text-slate-900">
@@ -527,75 +677,22 @@ const AdminDashboard = () => {
             <p className="mt-1 text-sm text-slate-500">
               Votes submitted
             </p>
+
           </div>
+
         </div>
 
         {/* =====================================================
-            REGISTERED STUDENTS
-        ====================================================== */}
-        <div className="mb-6 mt-6 overflow-hidden rounded-3xl border-2 border-violet-200 bg-white shadow-lg shadow-violet-100/60">
-
-          <div className="border-b border-violet-200 bg-gradient-to-r from-violet-50 via-purple-50 to-indigo-50 p-5 sm:p-6">
-
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-
+            ELECTION RESULTS CHART
+        ===================================================== */}
+        <div className="mb-6 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+          <div className="border-b border-slate-100 bg-gradient-to-r from-white to-violet-50/60 px-5 py-5 sm:px-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-3">
-
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-violet-600 text-white shadow-md shadow-violet-200">
-
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-violet-100 text-violet-600">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    className="h-6 w-6"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth="1.7"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M15.75 6.75a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z"
-                    />
-
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M4.5 20.25a7.5 7.5 0 0115 0"
-                    />
-                  </svg>
-
-                </div>
-
-                <div>
-
-                  <div className="flex flex-wrap items-center gap-2">
-
-                    <h2 className="font-bold text-slate-900">
-                      Registered Students
-                    </h2>
-
-                    <span className="rounded-full bg-violet-600 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white">
-                      Student Records
-                    </span>
-
-                  </div>
-
-                  <p className="mt-1 text-xs text-slate-500">
-                    Search and manage students registered in the election.
-                    Vote numbers are displayed as Class-Section-###.
-                  </p>
-
-                </div>
-
-              </div>
-
-              <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center lg:w-auto">
-
-                <div className="relative w-full sm:w-72">
-
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-violet-400"
+                    className="h-5 w-5"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -604,57 +701,558 @@ const AdminDashboard = () => {
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
-                      d="m21 21-4.35-4.35m1.35-5.4a6.75 6.75 0 11-13.5 0 6.75 6.75 0 0113.5 0z"
+                      d="M4.5 19.5V11m5 8.5V6.5m5 13V9m5 10.5V3.5"
                     />
                   </svg>
-
-                  <input
-                    type="text"
-                    value={studentClassSearch}
-                    onChange={(e) =>
-                      setStudentClassSearch(e.target.value)
-                    }
-                    placeholder="Search exact class e.g. X"
-                    className="w-full rounded-xl border-2 border-violet-100 bg-white py-3 pl-10 pr-4 text-sm font-medium text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
-                  />
-
                 </div>
 
-                <span className="self-start rounded-full bg-violet-600 px-4 py-2 text-xs font-bold text-white shadow-sm sm:self-auto">
-                  {filteredStudents.length} Students
-                </span>
-
+                <div>
+                  <h2 className="font-bold text-slate-900">
+                    Election Results Overview
+                  </h2>
+                  <p className="text-xs text-slate-500">
+                    Live vote comparison across all Students Council candidates.
+                  </p>
+                </div>
               </div>
 
+              <div className="flex items-center gap-2">
+                <span className="rounded-full bg-violet-100 px-3 py-1.5 text-xs font-bold text-violet-700">
+                  {totalVotes} Total Votes
+                </span>
+                <span className="rounded-full bg-emerald-100 px-3 py-1.5 text-xs font-bold text-emerald-700">
+                  Live Results
+                </span>
+              </div>
             </div>
+          </div>
 
-            {studentClassSearch.trim() && (
-              <div className="mt-4 flex items-center gap-2 rounded-xl border border-violet-100 bg-white/80 px-4 py-3 text-xs text-violet-700">
+          {chartData.length === 0 ? (
+            <div className="flex min-h-[360px] items-center justify-center p-6">
+              <div className="rounded-2xl bg-slate-50 px-8 py-12 text-center">
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-7 w-7"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth="1.7"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M3.75 18.75h16.5M6.75 15.75v3m3.75-6v6m3.75-9v9m3.75-12v12"
+                    />
+                  </svg>
+                </div>
 
+                <h3 className="mt-4 font-bold text-slate-800">
+                  No voting results yet
+                </h3>
+
+                <p className="mt-1 max-w-sm text-sm text-slate-500">
+                  Candidate vote results will appear here as students cast their votes.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="p-4 sm:p-6">
+              <div className="mb-5 flex flex-wrap items-center gap-2">
+                <span className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600">
+                  Highest vote: {chartData[0]?.votes || 0}
+                </span>
+
+                <span className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600">
+                  {chartData.length} Candidates
+                </span>
+              </div>
+
+              <div className="h-[430px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={chartData}
+                    margin={{
+                      top: 10,
+                      right: 25,
+                      left: 20,
+                      bottom: 10,
+                    }}
+                    barCategoryGap="22%"
+                  >
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      horizontal={false}
+                    />
+
+                    <XAxis
+                      dataKey="candidate"
+                      axisLine={false}
+                      tickLine={false}
+                      interval={0}
+                      angle={-35}
+                      textAnchor="end"
+                      height={90}
+                      tick={{ fontSize: 11 }}
+                    />
+
+                    <YAxis
+                      type="number"
+                      allowDecimals={false}
+                      axisLine={false}
+                      tickLine={false}
+                      width={45}
+                      tick={{ fontSize: 12 }}
+                    />
+
+                    <Tooltip
+                      cursor={{ fill: "rgba(139, 92, 246, 0.06)" }}
+                      content={({ active, payload }) => {
+                        if (!active || !payload?.length) return null;
+
+                        const item = payload[0].payload;
+
+                        return (
+                          <div className="min-w-[190px] rounded-2xl border border-slate-200 bg-white p-4 shadow-xl">
+                            <p className="font-bold text-slate-900">
+                              {item.candidate}
+                            </p>
+
+                            <p className="mt-1 text-xs font-medium text-slate-400">
+                              Position: {item.position}
+                            </p>
+
+                            <div className="mt-3 flex items-end justify-between gap-4">
+                              <span className="text-xs font-semibold text-slate-500">
+                                Votes
+                              </span>
+
+                              <span className="text-2xl font-extrabold text-violet-600">
+                                {item.votes}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      }}
+                    />
+
+                    <Bar
+                      dataKey="votes"
+                      name="Votes"
+                      radius={[10, 10, 0, 0]}
+                      maxBarSize={56}
+                      fill="#7c3aed"
+                      label={{
+                        position: "top",
+                        fill: "#475569",
+                        fontSize: 12,
+                        fontWeight: 700,
+                      }}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* =====================================================
+            POSITIONS & RESULTS
+        ===================================================== */}
+        <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+
+          <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+
+            <div className="flex items-center gap-3">
+
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-100 text-amber-600">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  className="h-4 w-4 shrink-0"
+                  className="h-5 w-5"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
-                  strokeWidth="1.8"
+                  strokeWidth="1.7"
                 >
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    d="M13 16h-1v-4h-1m1-4h.01M12 21a9 9 0 100-18 9 9 0 000 18z"
+                    d="M12 3l2.5 5.25L20.25 9l-4.125 4.125L17.25 19.5 12 16.75 6.75 19.5l1.125-6.375L3.75 9l5.75-.75L12 3z"
                   />
                 </svg>
-
-                <span>
-                  Showing students from exact class{" "}
-                  <strong>
-                    "{studentClassSearch.trim()}"
-                  </strong>
-                </span>
-
               </div>
-            )}
+
+              <div>
+                <h2 className="font-bold text-slate-900">
+                  Positions & Results
+                </h2>
+
+                <p className="text-xs text-slate-500">
+                  Monitor candidate performance and winners.
+                </p>
+              </div>
+
+            </div>
+
+            <span className="self-start rounded-full bg-amber-100 px-3 py-1.5 text-xs font-bold text-amber-700 sm:self-auto">
+              {positions.length} Positions
+            </span>
+
+          </div>
+
+          {positions.length === 0 ? (
+
+            <div className="rounded-2xl bg-slate-50 p-10 text-center">
+
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-7 w-7"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth="1.7"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M12 3l2.5 5.25L20.25 9l-4.125 4.125L17.25 19.5 12 16.75 6.75 19.5l1.125-6.375L3.75 9l5.75-.75L12 3z"
+                  />
+                </svg>
+              </div>
+
+              <h3 className="mt-4 font-bold text-slate-800">
+                No Positions Available
+              </h3>
+
+              <p className="mt-1 text-sm text-slate-500">
+                Election positions will appear here.
+              </p>
+
+            </div>
+
+          ) : (
+
+            <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+
+              {positions.map((position, index) => {
+
+                const winnerData = getWinner(
+                  position.candidates,
+                  position.position
+                );
+
+                const totalPositionVotes =
+                  position.candidates?.reduce(
+                    (total, candidate) =>
+                      total +
+                      getVoteCount(
+                        candidate._id,
+                        position.position
+                      ),
+                    0
+                  ) || 0;
+
+                return (
+
+                  <div
+                    key={position._id}
+                    className="overflow-hidden rounded-3xl border border-slate-200 bg-slate-50"
+                  >
+
+                    {/* Position Header */}
+                    <div className="flex items-center justify-between border-b border-slate-200 bg-white px-5 py-5">
+
+                      <div className="flex items-center gap-3">
+
+                        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-violet-100 text-sm font-bold text-violet-600">
+                          {index + 1}
+                        </div>
+
+                        <div>
+                          <p className="text-xs uppercase tracking-wide text-slate-400">
+                            Position
+                          </p>
+
+                          <h3 className="font-bold text-slate-800">
+                            {position.position}
+                          </h3>
+                        </div>
+
+                      </div>
+
+                      <span className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-500">
+                        {totalPositionVotes} votes
+                      </span>
+
+                    </div>
+
+                    {/* Candidates */}
+                    <div className="space-y-3 p-4">
+
+                      {position.candidates?.length > 0 ? (
+
+                        position.candidates.map((candidate) => {
+
+                          const candidateVotes =
+                            getVoteCount(
+                              candidate._id,
+                              position.position
+                            );
+
+                          const percentage =
+                            totalPositionVotes > 0
+                              ? Math.round(
+                                  (candidateVotes /
+                                    totalPositionVotes) *
+                                    100
+                                )
+                              : 0;
+
+                          const isWinner =
+                            winnerData?.winner?._id ===
+                            candidate._id;
+
+                          return (
+
+                            <div
+                              key={candidate._id}
+                              className={`rounded-2xl border bg-white p-4 transition ${
+                                isWinner
+                                  ? "border-emerald-200 shadow-sm"
+                                  : "border-slate-200"
+                              }`}
+                            >
+
+                              <div className="flex items-center justify-between gap-3">
+
+                                <div className="flex min-w-0 items-center gap-3">
+
+                                  <div
+                                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl font-bold ${
+                                      isWinner
+                                        ? "bg-emerald-100 text-emerald-600"
+                                        : "bg-slate-100 text-slate-500"
+                                    }`}
+                                  >
+                                    {candidate.name
+                                      ?.charAt(0)
+                                      ?.toUpperCase()}
+                                  </div>
+
+                                  <div className="min-w-0">
+
+                                    <div className="flex flex-wrap items-center gap-2">
+
+                                      <p className="truncate text-sm font-bold text-slate-800">
+                                        {candidate.name}
+                                      </p>
+
+                                      {isWinner && (
+                                        <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
+                                          WINNER
+                                        </span>
+                                      )}
+
+                                    </div>
+
+                                    <p className="mt-0.5 text-xs text-slate-400">
+                                      {percentage}% of votes
+                                    </p>
+
+                                  </div>
+
+                                </div>
+
+                                <div className="flex shrink-0 items-center gap-3">
+
+                                  <span
+                                    className={`text-sm font-bold ${
+                                      isWinner
+                                        ? "text-emerald-600"
+                                        : "text-violet-600"
+                                    }`}
+                                  >
+                                    {candidateVotes}
+                                  </span>
+
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      deleteCandidate(
+                                        candidate._id
+                                      )
+                                    }
+                                    className="flex h-9 w-9 items-center justify-center rounded-xl bg-red-50 text-red-500 transition hover:bg-red-100"
+                                    title="Delete candidate"
+                                  >
+                                    <svg
+                                      xmlns="http://www.w3.org/2000/svg"
+                                      className="h-4 w-4"
+                                      fill="none"
+                                      viewBox="0 0 24 24"
+                                      stroke="currentColor"
+                                      strokeWidth="1.8"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        d="M6 7.5h12M9.75 7.5V5.25h4.5V7.5m-6.75 0l.75 12h7.5l.75-12"
+                                      />
+                                    </svg>
+                                  </button>
+
+                                </div>
+
+                              </div>
+
+                              {/* Progress */}
+                              <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100">
+
+                                <div
+                                  className={`h-full rounded-full transition-all duration-500 ${
+                                    isWinner
+                                      ? "bg-emerald-500"
+                                      : "bg-violet-500"
+                                  }`}
+                                  style={{
+                                    width: `${percentage}%`,
+                                  }}
+                                />
+
+                              </div>
+
+                            </div>
+
+                          );
+                        })
+
+                      ) : (
+
+                        <div className="rounded-2xl bg-white p-6 text-center text-sm text-slate-500">
+                          No candidates available.
+                        </div>
+
+                      )}
+
+                    </div>
+
+                    {/* Winner */}
+                    {winnerData && (
+                      <div className="border-t border-emerald-100 bg-emerald-50 px-5 py-4">
+
+                        <div className="flex items-center gap-3">
+
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600">
+
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="h-5 w-5"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                              strokeWidth="1.8"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M12 3l2.5 5.25L20.25 9l-4.125 4.125L17.25 19.5 12 16.75 6.75 19.5l1.125-6.375L3.75 9l5.75-.75L12 3z"
+                              />
+                            </svg>
+
+                          </div>
+
+                          <div className="min-w-0">
+
+                            <p className="text-xs font-semibold uppercase tracking-wide text-emerald-600">
+                              Current Winner
+                            </p>
+
+                            <p className="truncate font-bold text-emerald-800">
+                              {winnerData.winner.name}
+                              <span className="ml-2 font-medium">
+                                ({winnerData.maxVotes} votes)
+                              </span>
+                            </p>
+
+                          </div>
+
+                        </div>
+
+                      </div>
+                    )}
+
+                  </div>
+
+                );
+              })}
+
+            </div>
+
+          )}
+
+        </div>
+
+        {/* =====================================================
+            STUDENTS
+        ===================================================== */}
+        <div className="mb-6 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+
+          {/* Section Header */}
+          <div className="flex flex-col gap-4 border-b border-slate-100 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+
+            <div className="flex items-center gap-3">
+
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-violet-100 text-violet-600">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth="1.7"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M15.75 6.75a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z"
+                  />
+
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M4.5 20.25a7.5 7.5 0 0115 0"
+                  />
+                </svg>
+              </div>
+
+              <div>
+                <h2 className="font-bold text-slate-900">
+                  Registered Students
+                </h2>
+
+                <p className="text-xs text-slate-500">
+                  Manage students registered in the election.
+                </p>
+              </div>
+
+            </div>
+
+            <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
+              <div className="relative w-full sm:w-64">
+                <input
+                  type="text"
+                  value={studentClassSearch}
+                  onChange={(e) => setStudentClassSearch(e.target.value)}
+                  placeholder="Search class e.g. VIII"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-violet-400 focus:bg-white focus:ring-2 focus:ring-violet-100"
+                />
+              </div>
+
+              <span className="self-start rounded-full bg-violet-100 px-3 py-1.5 text-xs font-bold text-violet-700 sm:self-auto">
+                {filteredStudents.length} Students
+              </span>
+            </div>
 
           </div>
 
@@ -663,7 +1261,6 @@ const AdminDashboard = () => {
             <div className="p-10 text-center">
 
               <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
-
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   className="h-7 w-7"
@@ -684,7 +1281,6 @@ const AdminDashboard = () => {
                     d="M4.5 20.25a7.5 7.5 0 0115 0"
                   />
                 </svg>
-
               </div>
 
               <h3 className="mt-4 font-bold text-slate-800">
@@ -701,60 +1297,107 @@ const AdminDashboard = () => {
 
             <div className="overflow-x-auto">
 
-              <table className="w-full min-w-[1050px]">
+              <table className="w-full min-w-[720px]">
 
                 <thead>
-
-                  <tr className="bg-violet-50 text-left text-xs uppercase tracking-wider text-violet-700">
-
-                    <th className="px-6 py-4 font-bold">
+                  <tr className="bg-slate-50 text-left text-xs uppercase tracking-wider text-slate-500">
+                    <th className="px-6 py-4 font-semibold">
                       Student
                     </th>
 
-                    <th className="px-6 py-4 font-bold">
-                      Father Name
-                    </th>
-
-                    <th className="px-6 py-4 font-bold">
+                    <th className="px-6 py-4 font-semibold">
                       Class
                     </th>
 
-                    <th className="px-6 py-4 font-bold">
+                    <th className="px-6 py-4 font-semibold">
                       Section
                     </th>
 
-                    <th className="px-6 py-4 font-bold">
+                    <th className="px-6 py-4 font-semibold">
                       Vote Number
                     </th>
 
-                    <th className="px-6 py-4 font-bold">
-                      Password
-                    </th>
-
-                    <th className="px-6 py-4 text-right font-bold">
+                    <th className="px-6 py-4 text-right font-semibold">
                       Action
                     </th>
-
                   </tr>
-
                 </thead>
 
-                <tbody className="divide-y divide-violet-50">
+                <tbody className="divide-y divide-slate-100">
 
                   {filteredStudents.length === 0 ? (
-
                     <tr>
-
                       <td
-                        colSpan="7"
-                        className="px-6 py-12 text-center"
+                        colSpan="5"
+                        className="px-6 py-10 text-center text-sm text-slate-500"
                       >
+                        No students found for class "{studentClassSearch}".
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredStudents.map((student) => (
 
-                        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-violet-50 text-violet-400">
+                    <tr
+                      key={student._id}
+                      className="transition hover:bg-slate-50"
+                    >
 
+                      <td className="px-6 py-4">
+
+                        <div className="flex items-center gap-3">
+
+                          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-100 font-bold text-violet-600">
+                            {student.username
+                              ?.charAt(0)
+                              ?.toUpperCase()}
+                          </div>
+
+                          <div>
+                            <p className="font-semibold text-slate-800">
+                              {student.username}
+                            </p>
+
+                            <p className="text-xs text-slate-400">
+                              Student
+                            </p>
+                          </div>
+
+                        </div>
+
+                      </td>
+
+                      <td className="px-6 py-4 text-sm text-slate-600">
+                        {student.class}
+                      </td>
+
+                      <td className="px-6 py-4">
+
+                        <span className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600">
+                          {student.section}
+                        </span>
+
+                      </td>
+
+                      <td className="px-6 py-4">
+
+                        <span className="rounded-lg bg-violet-50 px-3 py-1.5 text-sm font-bold text-violet-600">
+                          {student.voteNumber}
+                        </span>
+
+                      </td>
+
+                      <td className="px-6 py-4 text-right">
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            deleteStudent(student._id)
+                          }
+                          className="inline-flex items-center gap-2 rounded-xl bg-red-50 px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-100"
+                        >
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
-                            className="h-6 w-6"
+                            className="h-4 w-4"
                             fill="none"
                             viewBox="0 0 24 24"
                             stroke="currentColor"
@@ -763,135 +1406,18 @@ const AdminDashboard = () => {
                             <path
                               strokeLinecap="round"
                               strokeLinejoin="round"
-                              d="m21 21-4.35-4.35m1.35-5.4a6.75 6.75 0 11-13.5 0 6.75 6.75 0 0113.5 0z"
+                              d="M6 7.5h12M9.75 7.5V5.25h4.5V7.5m-6.75 0l.75 12h7.5l.75-12"
                             />
                           </svg>
 
-                        </div>
-
-                        <p className="mt-3 font-semibold text-slate-700">
-                          No students found
-                        </p>
-
-                        <p className="mt-1 text-sm text-slate-500">
-                          No students belong to class "
-                          {studentClassSearch.trim()}". 
-                        </p>
+                          Delete
+                        </button>
 
                       </td>
 
                     </tr>
 
-                  ) : (
-
-                    filteredStudents.map((student) => (
-
-                      <tr
-                        key={student._id}
-                        className="transition hover:bg-violet-50/50"
-                      >
-
-                        <td className="px-6 py-4">
-
-                          <div className="flex items-center gap-3">
-
-                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-100 font-bold text-violet-600">
-
-                              {student.username
-                                ?.charAt(0)
-                                ?.toUpperCase()}
-
-                            </div>
-
-                            <div>
-
-                              <p className="font-semibold text-slate-800">
-                                {student.username}
-                              </p>
-
-                              <p className="text-xs text-slate-400">
-                                Student
-                              </p>
-
-                            </div>
-
-                          </div>
-
-                        </td>
-
-                        <td className="px-6 py-4">
-
-                          <p className="font-medium text-slate-700">
-                            {student.fatherName}
-                          </p>
-
-                        </td>
-
-                        <td className="px-6 py-4">
-
-                          <span className="inline-flex rounded-lg bg-violet-100 px-3 py-1.5 text-sm font-bold text-violet-700">
-                            {student.class}
-                          </span>
-
-                        </td>
-
-                        <td className="px-6 py-4">
-
-                          <span className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600">
-                            {student.section}
-                          </span>
-
-                        </td>
-
-                        <td className="px-6 py-4">
-
-                          <span className="rounded-lg bg-violet-50 px-3 py-1.5 text-sm font-bold text-violet-600">
-                            {formatVoteNumber(student)}
-                          </span>
-
-                        </td>
-
-                        <td className="px-6 py-4">
-                          <span className="inline-flex min-w-[110px] rounded-lg bg-amber-50 px-3 py-1.5 text-sm font-bold text-amber-700">
-                            {student.password || "—"}
-                          </span>
-                        </td>
-
-                        <td className="px-6 py-4 text-right">
-
-                          <button
-                            type="button"
-                            onClick={() =>
-                              deleteStudent(student._id)
-                            }
-                            className="inline-flex items-center gap-2 rounded-xl bg-red-50 px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-100"
-                          >
-
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="h-4 w-4"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                              strokeWidth="1.8"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                d="M6 7.5h12M9.75 7.5V5.25h4.5V7.5m-6.75 0l.75 12h7.5l.75-12"
-                              />
-                            </svg>
-
-                            Delete
-
-                          </button>
-
-                        </td>
-
-                      </tr>
-
                     ))
-
                   )}
 
                 </tbody>
@@ -904,9 +1430,10 @@ const AdminDashboard = () => {
 
         </div>
 
+
         {/* =====================================================
             FOOTER
-        ====================================================== */}
+        ===================================================== */}
         <div className="py-6 text-center">
 
           <p className="text-xs text-slate-400">
