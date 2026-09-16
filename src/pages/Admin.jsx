@@ -1,8 +1,11 @@
-
 import React, { useEffect, useMemo, useState } from "react";
+
 import { toast } from "react-toastify";
+
 import api from "../api";
+
 import logo from "../assets/logo.jpeg";
+
 import electionLogo from "../assets/election.jpeg";
 
 import {
@@ -25,6 +28,7 @@ const AdminDashboard = () => {
   // =========================================================
   // FILTER STUDENTS
   // =========================================================
+
   const filteredStudents = useMemo(() => {
     const search = studentClassSearch.trim().toLowerCase();
 
@@ -42,6 +46,7 @@ const AdminDashboard = () => {
   // =========================================================
   // GET CANDIDATE PROFILE IMAGE
   // =========================================================
+
   const getCandidateProfileImage = (candidate) => {
     const profile = candidate?.profile;
 
@@ -67,6 +72,7 @@ const AdminDashboard = () => {
   // =========================================================
   // FETCH DATA
   // =========================================================
+
   const fetchData = async (showRefresh = false) => {
     if (showRefresh) {
       setRefreshing(true);
@@ -165,6 +171,7 @@ const AdminDashboard = () => {
   // =========================================================
   // DELETE STUDENT
   // =========================================================
+
   const deleteStudent = async (id) => {
     const confirmed = window.confirm(
       "Are you sure you want to delete this student?"
@@ -191,6 +198,7 @@ const AdminDashboard = () => {
   // =========================================================
   // DELETE CANDIDATE
   // =========================================================
+
   const deleteCandidate = async (id) => {
     const confirmed = window.confirm(
       "Are you sure you want to delete this candidate?"
@@ -217,6 +225,7 @@ const AdminDashboard = () => {
   // =========================================================
   // COUNT VOTES
   // =========================================================
+
   const getVoteCount = (candidateId, position) => {
     return votes.filter(
       (v) =>
@@ -228,17 +237,18 @@ const AdminDashboard = () => {
   // =========================================================
   // FIND WINNER
   // =========================================================
+  // IMPORTANT:
+  // If every candidate has 0 votes, there is NO winner.
+  // The first candidate should NOT automatically become winner.
+  // =========================================================
+
   const getWinner = (candidates, position) => {
     if (!candidates || candidates.length === 0) {
       return null;
     }
 
-    let winner = candidates[0];
-
-    let maxVotes = getVoteCount(
-      winner._id,
-      position
-    );
+    let winner = null;
+    let maxVotes = 0;
 
     candidates.forEach((candidate) => {
       const count = getVoteCount(
@@ -252,6 +262,12 @@ const AdminDashboard = () => {
       }
     });
 
+    // No candidate received any vote.
+    // Therefore, there is no winner yet.
+    if (!winner || maxVotes === 0) {
+      return null;
+    }
+
     return {
       winner,
       maxVotes,
@@ -261,6 +277,7 @@ const AdminDashboard = () => {
   // =========================================================
   // DASHBOARD STATISTICS
   // =========================================================
+
   const totalCandidates = useMemo(() => {
     return positions.reduce(
       (total, position) =>
@@ -276,6 +293,7 @@ const AdminDashboard = () => {
   // =========================================================
   // PIE CHART DATA
   // =========================================================
+
   const chartData = useMemo(() => {
     return positions.flatMap((position) =>
       (position.candidates || []).map((candidate) => ({
@@ -294,6 +312,7 @@ const AdminDashboard = () => {
   // =========================================================
   // PIE COLORS
   // =========================================================
+
   const PIE_COLORS = [
     "#7c3aed",
     "#4f46e5",
@@ -312,6 +331,7 @@ const AdminDashboard = () => {
   // =========================================================
   // PIE TOTAL
   // =========================================================
+
   const pieTotalVotes = useMemo(() => {
     return chartData.reduce(
       (total, item) => total + item.votes,
@@ -322,6 +342,7 @@ const AdminDashboard = () => {
   // =========================================================
   // CUSTOM PIE LABEL
   // =========================================================
+
   const renderPieLabel = ({
     candidate,
     percent,
@@ -336,6 +357,7 @@ const AdminDashboard = () => {
   // =========================================================
   // CUSTOM LEGEND WITH CANDIDATE IMAGES
   // =========================================================
+
   const renderCustomLegend = (props) => {
     const { payload } = props;
 
@@ -347,9 +369,8 @@ const AdminDashboard = () => {
               chartItem.candidate === entry.value
           );
 
-          const profileImage = getCandidateProfileImage(
-            item
-          );
+          const profileImage =
+            getCandidateProfileImage(item);
 
           return (
             <div
@@ -364,8 +385,13 @@ const AdminDashboard = () => {
                   onError={(e) => {
                     e.currentTarget.style.display =
                       "none";
-                    e.currentTarget.nextSibling.style.display =
-                      "flex";
+
+                    if (
+                      e.currentTarget.nextSibling
+                    ) {
+                      e.currentTarget.nextSibling.style.display =
+                        "flex";
+                    }
                   }}
                 />
               ) : null}
@@ -411,6 +437,7 @@ const AdminDashboard = () => {
   // =========================================================
   // EXPORT RESULTS
   // =========================================================
+
   const exportResults = () => {
     if (positions.length === 0) {
       toast.warning(
@@ -476,6 +503,7 @@ const AdminDashboard = () => {
   // =========================================================
   // LOADING SCREEN
   // =========================================================
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
@@ -523,15 +551,15 @@ const AdminDashboard = () => {
         {/* =====================================================
             HEADER
         ===================================================== */}
-        <div className="mb-6 overflow-hidden rounded-3xl bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700 p-6 text-white shadow-xl shadow-purple-200/50 sm:p-8">
 
+        <div className="mb-6 overflow-hidden rounded-3xl bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700 p-6 text-white shadow-xl shadow-purple-200/50 sm:p-8">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
 
             <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
 
               {/* BOTH LOGOS */}
-              <div className="flex w-fit items-center gap-2 rounded-2xl bg-white p-2 shadow-lg">
 
+              <div className="flex w-fit items-center gap-2 rounded-2xl bg-white p-2 shadow-lg">
                 <div className="flex h-14 w-20 items-center justify-center rounded-xl sm:h-16 sm:w-24">
                   <img
                     src={logo}
@@ -549,11 +577,9 @@ const AdminDashboard = () => {
                     className="max-h-full max-w-full object-contain"
                   />
                 </div>
-
               </div>
 
               <div className="flex items-start gap-4">
-
                 <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/15 backdrop-blur-sm">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -597,13 +623,12 @@ const AdminDashboard = () => {
                     and election results from one place.
                   </p>
                 </div>
-
               </div>
             </div>
 
             {/* HEADER ACTIONS */}
-            <div className="flex flex-col gap-3 sm:flex-row">
 
+            <div className="flex flex-col gap-3 sm:flex-row">
               <button
                 type="button"
                 onClick={() => fetchData(true)}
@@ -684,7 +709,6 @@ const AdminDashboard = () => {
 
                 Export Results
               </button>
-
             </div>
           </div>
         </div>
@@ -692,13 +716,13 @@ const AdminDashboard = () => {
         {/* =====================================================
             STATISTICS
         ===================================================== */}
+
         <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
 
           {/* STUDENTS */}
+
           <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-md">
-
             <div className="flex items-center justify-between">
-
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-violet-100 text-violet-600">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -734,14 +758,12 @@ const AdminDashboard = () => {
             <p className="mt-1 text-sm text-slate-500">
               Registered students
             </p>
-
           </div>
 
           {/* CANDIDATES */}
+
           <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-md">
-
             <div className="flex items-center justify-between">
-
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-100 text-indigo-600">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -768,7 +790,6 @@ const AdminDashboard = () => {
               <span className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-600">
                 Candidates
               </span>
-
             </div>
 
             <p className="mt-5 text-3xl font-bold text-slate-900">
@@ -778,14 +799,12 @@ const AdminDashboard = () => {
             <p className="mt-1 text-sm text-slate-500">
               Registered candidates
             </p>
-
           </div>
 
           {/* POSITIONS */}
+
           <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-md">
-
             <div className="flex items-center justify-between">
-
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100 text-amber-600">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -806,7 +825,6 @@ const AdminDashboard = () => {
               <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-600">
                 Positions
               </span>
-
             </div>
 
             <p className="mt-5 text-3xl font-bold text-slate-900">
@@ -816,14 +834,12 @@ const AdminDashboard = () => {
             <p className="mt-1 text-sm text-slate-500">
               Election positions
             </p>
-
           </div>
 
           {/* VOTES */}
+
           <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-md">
-
             <div className="flex items-center justify-between">
-
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-600">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -850,7 +866,6 @@ const AdminDashboard = () => {
               <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-600">
                 Votes
               </span>
-
             </div>
 
             <p className="mt-5 text-3xl font-bold text-slate-900">
@@ -860,21 +875,19 @@ const AdminDashboard = () => {
             <p className="mt-1 text-sm text-slate-500">
               Votes submitted
             </p>
-
           </div>
         </div>
 
         {/* =====================================================
             PIE CHART
         ===================================================== */}
+
         <div className="mb-6 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
 
           <div className="border-b border-slate-100 bg-gradient-to-r from-white to-violet-50/60 px-5 py-5 sm:px-6">
-
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 
               <div className="flex items-center gap-3">
-
                 <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-violet-100 text-violet-600">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -908,11 +921,9 @@ const AdminDashboard = () => {
                     Students Council candidates.
                   </p>
                 </div>
-
               </div>
 
               <div className="flex items-center gap-2">
-
                 <span className="rounded-full bg-violet-100 px-3 py-1.5 text-xs font-bold text-violet-700">
                   {pieTotalVotes} Total Votes
                 </span>
@@ -920,18 +931,13 @@ const AdminDashboard = () => {
                 <span className="rounded-full bg-emerald-100 px-3 py-1.5 text-xs font-bold text-emerald-700">
                   Live Results
                 </span>
-
               </div>
-
             </div>
           </div>
 
           {chartData.length === 0 ? (
-
             <div className="flex min-h-[360px] items-center justify-center p-6">
-
               <div className="rounded-2xl bg-slate-50 px-8 py-12 text-center">
-
                 <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -957,16 +963,12 @@ const AdminDashboard = () => {
                   Candidate vote results will appear
                   here as students cast their votes.
                 </p>
-
               </div>
             </div>
-
           ) : (
-
             <div className="p-4 sm:p-6">
 
               <div className="mb-5 flex flex-wrap items-center gap-2">
-
                 <span className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600">
                   {chartData.length} Candidates
                 </span>
@@ -974,17 +976,14 @@ const AdminDashboard = () => {
                 <span className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600">
                   {pieTotalVotes} Votes Counted
                 </span>
-
               </div>
 
               <div className="h-[500px] w-full">
-
                 <ResponsiveContainer
                   width="100%"
                   height="100%"
                 >
                   <PieChart>
-
                     <Pie
                       data={chartData}
                       dataKey="votes"
@@ -1031,7 +1030,6 @@ const AdminDashboard = () => {
 
                         return (
                           <div className="min-w-[230px] rounded-2xl border border-slate-200 bg-white p-4 shadow-xl">
-
                             <div className="flex items-center gap-3">
 
                               {profileImage ? (
@@ -1064,11 +1062,9 @@ const AdminDashboard = () => {
                                   {item.position}
                                 </p>
                               </div>
-
                             </div>
 
                             <div className="mt-4 flex items-end justify-between">
-
                               <span className="text-xs font-semibold text-slate-500">
                                 Votes
                               </span>
@@ -1076,9 +1072,7 @@ const AdminDashboard = () => {
                               <span className="text-2xl font-extrabold text-violet-600">
                                 {item.votes}
                               </span>
-
                             </div>
-
                           </div>
                         );
                       }}
@@ -1087,10 +1081,8 @@ const AdminDashboard = () => {
                     <Legend
                       content={renderCustomLegend}
                     />
-
                   </PieChart>
                 </ResponsiveContainer>
-
               </div>
             </div>
           )}
@@ -1099,12 +1091,12 @@ const AdminDashboard = () => {
         {/* =====================================================
             POSITIONS & RESULTS
         ===================================================== */}
+
         <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
 
           <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 
             <div className="flex items-center gap-3">
-
               <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-100 text-amber-600">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -1131,17 +1123,14 @@ const AdminDashboard = () => {
                   Monitor candidate performance and winners.
                 </p>
               </div>
-
             </div>
 
             <span className="self-start rounded-full bg-amber-100 px-3 py-1.5 text-xs font-bold text-amber-700 sm:self-auto">
               {positions.length} Positions
             </span>
-
           </div>
 
           {positions.length === 0 ? (
-
             <div className="rounded-2xl bg-slate-50 p-10 text-center">
 
               <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
@@ -1168,16 +1157,12 @@ const AdminDashboard = () => {
               <p className="mt-1 text-sm text-slate-500">
                 Election positions will appear here.
               </p>
-
             </div>
-
           ) : (
-
             <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
 
               {positions.map(
                 (position, index) => {
-
                   const winnerData = getWinner(
                     position.candidates,
                     position.position
@@ -1201,10 +1186,10 @@ const AdminDashboard = () => {
                     >
 
                       {/* POSITION HEADER */}
+
                       <div className="flex items-center justify-between border-b border-slate-200 bg-white px-5 py-5">
 
                         <div className="flex items-center gap-3">
-
                           <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-violet-100 text-sm font-bold text-violet-600">
                             {index + 1}
                           </div>
@@ -1218,24 +1203,21 @@ const AdminDashboard = () => {
                               {position.position}
                             </h3>
                           </div>
-
                         </div>
 
                         <span className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-500">
                           {totalPositionVotes} votes
                         </span>
-
                       </div>
 
                       {/* CANDIDATES */}
+
                       <div className="space-y-3 p-4">
 
                         {position.candidates?.length >
                         0 ? (
-
                           position.candidates.map(
                             (candidate) => {
-
                               const candidateVotes =
                                 getVoteCount(
                                   candidate._id,
@@ -1279,6 +1261,7 @@ const AdminDashboard = () => {
                                     <div className="flex min-w-0 items-center gap-3">
 
                                       {/* CANDIDATE IMAGE */}
+
                                       {profileImage ? (
                                         <img
                                           src={
@@ -1311,6 +1294,7 @@ const AdminDashboard = () => {
                                       ) : null}
 
                                       {/* FALLBACK INITIAL */}
+
                                       <div
                                         className={`${
                                           profileImage
@@ -1344,16 +1328,13 @@ const AdminDashboard = () => {
                                               WINNER
                                             </span>
                                           )}
-
                                         </div>
 
                                         <p className="mt-0.5 text-xs text-slate-400">
                                           {percentage}% of
                                           votes
                                         </p>
-
                                       </div>
-
                                     </div>
 
                                     <div className="flex shrink-0 items-center gap-3">
@@ -1395,14 +1376,12 @@ const AdminDashboard = () => {
                                           />
                                         </svg>
                                       </button>
-
                                     </div>
-
                                   </div>
 
                                   {/* PROGRESS */}
-                                  <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100">
 
+                                  <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100">
                                     <div
                                       className={`h-full rounded-full transition-all duration-500 ${
                                         isWinner
@@ -1413,26 +1392,21 @@ const AdminDashboard = () => {
                                         width: `${percentage}%`,
                                       }}
                                     />
-
                                   </div>
-
                                 </div>
                               );
                             }
                           )
-
                         ) : (
-
                           <div className="rounded-2xl bg-white p-6 text-center text-sm text-slate-500">
                             No candidates available.
                           </div>
-
                         )}
-
                       </div>
 
                       {/* WINNER */}
-                      {winnerData && (
+
+                      {winnerData ? (
                         <div className="border-t border-emerald-100 bg-emerald-50 px-5 py-4">
 
                           <div className="flex items-center gap-3">
@@ -1464,6 +1438,7 @@ const AdminDashboard = () => {
                               </p>
 
                               <p className="truncate font-bold text-emerald-800">
+
                                 {
                                   winnerData.winner
                                     .name
@@ -1476,12 +1451,44 @@ const AdminDashboard = () => {
                                   }{" "}
                                   votes)
                                 </span>
-                              </p>
 
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        /* NO WINNER WHEN ALL CANDIDATES HAVE ZERO VOTES */
+
+                        <div className="border-t border-slate-200 bg-slate-100 px-5 py-4">
+                          <div className="flex items-center gap-3">
+
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-200 text-slate-500">
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="h-5 w-5"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                                strokeWidth="1.8"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  d="M12 9v3.75m0 3h.007M5.25 19.5h13.5a1.5 1.5 0 001.299-2.25L13.299 4.5a1.5 1.5 0 00-2.598 0L3.951 17.25A1.5 1.5 0 005.25 19.5z"
+                                />
+                              </svg>
                             </div>
 
-                          </div>
+                            <div>
+                              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                No Winner Yet
+                              </p>
 
+                              <p className="font-bold text-slate-700">
+                                No votes have been recorded for this position.
+                              </p>
+                            </div>
+                          </div>
                         </div>
                       )}
 
@@ -1489,18 +1496,18 @@ const AdminDashboard = () => {
                   );
                 }
               )}
-
             </div>
           )}
-
         </div>
 
         {/* =====================================================
             REGISTERED STUDENTS
         ===================================================== */}
+
         <div className="mb-6 mt-6 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
 
           {/* SECTION HEADER */}
+
           <div className="flex flex-col gap-4 border-b border-slate-100 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
 
             <div className="flex items-center gap-3">
@@ -1537,13 +1544,11 @@ const AdminDashboard = () => {
                   Manage students registered in the election.
                 </p>
               </div>
-
             </div>
 
             <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
 
               <div className="relative w-full sm:w-64">
-
                 <input
                   type="text"
                   value={studentClassSearch}
@@ -1555,19 +1560,15 @@ const AdminDashboard = () => {
                   placeholder="Search class e.g. VIII"
                   className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-violet-400 focus:bg-white focus:ring-2 focus:ring-violet-100"
                 />
-
               </div>
 
               <span className="self-start rounded-full bg-violet-100 px-3 py-1.5 text-xs font-bold text-violet-700 sm:self-auto">
                 {filteredStudents.length} Students
               </span>
-
             </div>
-
           </div>
 
           {students.length === 0 ? (
-
             <div className="p-10 text-center">
 
               <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
@@ -1600,11 +1601,8 @@ const AdminDashboard = () => {
               <p className="mt-1 text-sm text-slate-500">
                 Registered students will appear here.
               </p>
-
             </div>
-
           ) : (
-
             <div className="overflow-x-auto">
 
               <table className="w-full min-w-[900px]">
@@ -1628,7 +1626,6 @@ const AdminDashboard = () => {
                       Vote Number
                     </th>
 
-                    {/* PASSWORD COLUMN */}
                     <th className="px-6 py-4 font-semibold">
                       Password
                     </th>
@@ -1636,14 +1633,12 @@ const AdminDashboard = () => {
                     <th className="px-6 py-4 text-right font-semibold">
                       Action
                     </th>
-
                   </tr>
                 </thead>
 
                 <tbody className="divide-y divide-slate-100">
 
                   {filteredStudents.length === 0 ? (
-
                     <tr>
                       <td
                         colSpan="6"
@@ -1653,20 +1648,17 @@ const AdminDashboard = () => {
                         {studentClassSearch}".
                       </td>
                     </tr>
-
                   ) : (
-
                     filteredStudents.map(
                       (student) => (
-
                         <tr
                           key={student._id}
                           className="transition hover:bg-slate-50"
                         >
 
                           {/* STUDENT */}
-                          <td className="px-6 py-4">
 
+                          <td className="px-6 py-4">
                             <div className="flex items-center gap-3">
 
                               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-100 font-bold text-violet-600">
@@ -1676,7 +1668,6 @@ const AdminDashboard = () => {
                               </div>
 
                               <div>
-
                                 <p className="font-semibold text-slate-800">
                                   {student.username}
                                 </p>
@@ -1684,46 +1675,42 @@ const AdminDashboard = () => {
                                 <p className="text-xs text-slate-400">
                                   Student
                                 </p>
-
                               </div>
-
                             </div>
-
                           </td>
 
                           {/* CLASS */}
+
                           <td className="px-6 py-4 text-sm text-slate-600">
                             {student.class}
                           </td>
 
                           {/* SECTION */}
-                          <td className="px-6 py-4">
 
+                          <td className="px-6 py-4">
                             <span className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600">
                               {student.section}
                             </span>
-
                           </td>
 
                           {/* VOTE NUMBER */}
-                          <td className="px-6 py-4">
 
+                          <td className="px-6 py-4">
                             <span className="rounded-lg bg-violet-50 px-3 py-1.5 text-sm font-bold text-violet-600">
                               {student.voteNumber}
                             </span>
-
                           </td>
 
                           {/* PASSWORD */}
-                          <td className="px-6 py-4">
 
+                          <td className="px-6 py-4">
                             <span className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 font-mono text-sm font-semibold text-slate-700">
                               {student.password || "—"}
                             </span>
-
                           </td>
 
                           {/* DELETE */}
+
                           <td className="px-6 py-4 text-right">
 
                             <button
@@ -1752,26 +1739,21 @@ const AdminDashboard = () => {
 
                               Delete
                             </button>
-
                           </td>
-
                         </tr>
                       )
                     )
                   )}
-
                 </tbody>
-
               </table>
-
             </div>
           )}
-
         </div>
 
         {/* =====================================================
             FOOTER
         ===================================================== */}
+
         <div className="py-6 text-center">
 
           <p className="text-xs text-slate-400">
@@ -1783,7 +1765,6 @@ const AdminDashboard = () => {
           </p>
 
         </div>
-
       </div>
     </div>
   );
